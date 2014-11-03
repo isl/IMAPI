@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2014 Institute of Computer Science,
+               Foundation for Research and Technology - Hellas.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=============================================================================
+Contact: 
+=============================================================================
+Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+    Tel: +30-2810-391632
+    Fax: +30-2810-391638
+ E-mail: isl@ics.forth.gr
+WebSite: http://www.ics.forth.gr/isl/
+
+=============================================================================
+Authors: 
+=============================================================================
+Elias Tzortzakakis <tzortzak@ics.forth.gr>
+
+-->
+<Root>
+    
+    <ResultsThreshold>0.4</ResultsThreshold>    
+    
+    <literalMinimumSimilarityValue>0.4</literalMinimumSimilarityValue>
+    
+    <!--
+    acceptable values for TargetSourceChoice:
+    FILE_COMPARISON
+    BRITISH_MUSEUM_COLLECTION
+    CLAROS
+    -->
+    <TargetSourceChoice>BRITISH_MUSEUM_COLLECTION</TargetSourceChoice>
+    
+    <SourceInputFiles>
+        <File PredicateDirection="direct">./SampleData/test-File-for-british-museum-collection-db.rdf</File>        
+    </SourceInputFiles>    
+    
+    <TargetInputFiles>        
+        <File>./SampleData/target-File-for-file-comparison.rdf</File>
+    </TargetInputFiles>
+    
+    <!-- Some E21 Person Tests For file Comparison  -->
+    <QuerySequencesConfiguration BaseClassID="E21">
+        
+        <querysequence weight="0.0" mnemonic="literal"/>
+            
+        <querysequence weight="0.6" mnemonic="uri(a)">
+            <parameter name="a">P107</parameter>         
+        </querysequence>
+
+        <querysequence weight="0.0" mnemonic="literal(a)">
+            <parameter name="a">P3</parameter>            
+        </querysequence>
+
+        <querysequence weight="0.5" mnemonic="uri(a) -> literal">
+            <parameter name="a">P131</parameter>            
+        </querysequence>
+
+        <querysequence weight="0.0" mnemonic="uri(a1 | a1 -> a2) -> uri(b)">
+            <parameter name="a1">P14</parameter>
+            <parameter name="a2">P9</parameter>
+            <parameter name="b">P108</parameter>       
+        </querysequence>
+
+        <querysequence weight="0.0" mnemonic="uri(a) -> uri(b) -> timespan(c1 - c2)">
+            <parameter name="a">P98</parameter>
+            <parameter name="b">P4</parameter>   
+            <parameter name="c1">P82a</parameter>
+            <parameter name="c2">P82b</parameter>            
+        </querysequence>
+        
+    </QuerySequencesConfiguration>
+    
+</Root>

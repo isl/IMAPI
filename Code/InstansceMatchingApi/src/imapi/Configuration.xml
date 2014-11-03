@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2014 Institute of Computer Science,
+               Foundation for Research and Technology - Hellas.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=============================================================================
+Contact: 
+=============================================================================
+Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+    Tel: +30-2810-391632
+    Fax: +30-2810-391638
+ E-mail: isl@ics.forth.gr
+WebSite: http://www.ics.forth.gr/isl/
+
+=============================================================================
+Authors: 
+=============================================================================
+Elias Tzortzakakis <tzortzak@ics.forth.gr>
+
+-->
+<Root>
+    <SupportedDatabases>
+        <OnlineDatabase sourceid="BRITISH_MUSEUM_COLLECTION" PredicateDirection="direct">
+            <Name>British Museum Semantic Web Collection Online</Name>
+            <SparqlEndpoint>http://collection.britishmuseum.org/sparql</SparqlEndpoint>            
+            <QueryNamespaces>
+                <Namespace prefix="ecrm">http://erlangen-crm.org/current/</Namespace>
+                <Namespace prefix="rdfs">http://www.w3.org/2000/01/rdf-schema#</Namespace>
+                <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
+                <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>                
+                <Namespace prefix="bmo">http://collection.britishmuseum.org/id/ontology/</Namespace>
+            </QueryNamespaces>
+        </OnlineDatabase>
+        <!--
+        <OnlineDatabase sourceid="CULTURA_ITALIA">
+            <Name>Cultura Italia</Name>
+            <SparqlEndpoint>http://dati.culturaitalia.it/sparql/browse</SparqlEndpoint>            
+            <QueryNamespaces>
+                <Namespace prefix="ecrm">http://erlangen-crm.org/120111/</Namespace>
+                <Namespace prefix="rdfs">http://www.w3.org/2000/01/rdf-schema#</Namespace>
+                <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
+                <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>                                
+            </QueryNamespaces>
+        </OnlineDatabase>
+        <OnlineDatabase sourceid="BIBLIOTEQUE_NATIONALE_DE_FRANCE">
+            <Name>BIBLIOTEQUE_NATIONALE_DE_FRANCE</Name>
+            <SparqlEndpoint>http://data.bnf.fr/sparql/</SparqlEndpoint>            
+            <QueryNamespaces>
+                <Namespace prefix="ecrm">http://erlangen-crm.org/120111/</Namespace>
+                <Namespace prefix="rdfs">http://www.w3.org/2000/01/rdf-schema#</Namespace>
+                <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
+                <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>
+                <Namespace prefix="foaf">http://xmlns.com/foaf/0.1/Person</Namespace>                                
+            </QueryNamespaces>
+        </OnlineDatabase>-->
+        <OnlineDatabase sourceid="CLAROS" PredicateDirection="both">
+            <Name>CLAROS</Name>
+            <SparqlEndpoint>http://data.clarosnet.org/sparql/</SparqlEndpoint>            
+            <QueryNamespaces>
+                <Namespace prefix="crm">http://purl.org/NET/crm-owl#</Namespace>
+                <Namespace prefix="rdfs">http://www.w3.org/2000/01/rdf-schema#</Namespace>
+                <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
+                <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>                                              
+            </QueryNamespaces>
+        </OnlineDatabase>
+    </SupportedDatabases>    
+</Root>
