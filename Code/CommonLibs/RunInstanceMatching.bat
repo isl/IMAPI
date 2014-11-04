@@ -22,7 +22,7 @@ IF NOT EXIST "%UserConfigPath%" echo "ERROR: User Configuration xml file path (U
 IF NOT EXIST "%QueryPrototypePath%" echo "ERROR: Query Prototype Configuration xml file path (QueryPrototypePath) = %QueryPrototypePath% not found " && GOTO EXIT
 
 REM SET OUTPUTFILEPATH=%currentPath%\out-%mode%.txt
-SET OUTPUTFILEPATH=%currentPath%\out.txt
+REM SET OUTPUTFILEPATH=%currentPath%\out.txt
 
 cd ./ClassesAndLibs
 echo.
@@ -36,7 +36,8 @@ echo         Open this file to see the results.
 echo.
 echo.
 @echo ON
-"%JAVA_BIN_PATH%\java" -classpath InstansceMatchingApi-1.0.jar; TestInstansceMatchingApi "%BASEPATH%" "%UserConfigPath%" "%QueryPrototypePath%" >"%OUTPUTFILEPATH%"
+"%JAVA_BIN_PATH%\java" -Dfile.encoding=UTF8 -Xmx2048m -classpath InstansceMatchingApi-2.0.jar; TestInstansceMatchingApi "%BASEPATH%" "%UserConfigPath%" "%QueryPrototypePath%" false true %currentPath%
+REM >"%OUTPUTFILEPATH%"
 
 :EXIT
 pause

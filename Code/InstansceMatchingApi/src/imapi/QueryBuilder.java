@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +13,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
 import com.hp.hpl.jena.ontology.ObjectProperty;
@@ -35,15 +50,13 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import sun.security.krb5.internal.APReq;
+
 
 /**
  *
  * @author tzortzak
  */
 class QueryBuilder {
-    
-    static final String filterUriPlaceHolder = "###FILTERURISTATEMENT###";
     
     private static final String endLine = "\r\n";
     private static final String tabSpace ="    ";
@@ -52,158 +65,36 @@ class QueryBuilder {
     QueryBuilder(IMAPIClass whichImClass){
         this.imClass = whichImClass;          
     }
+   
+   
     
-    /*
-    String get_All_Instances_Query(String targetCidocNameSpace, String targetClass, boolean includeOutputLabel){
-        String basicQuery ="";
-        
-            //namespaces
-            basicQuery += "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" + endLine;
-            basicQuery += "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" + endLine;
-            basicQuery += "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>" + endLine;
-            basicQuery += "PREFIX crm: <" + targetCidocNameSpace + ">" + endLine + endLine;
+    int prepareQueries(Hashtable<String, String> validCidocNamespacesDeclared, 
+            Model targetModel, 
+            ApiConstants.TargetSourceChoice currentChoice, 
+            ApiConstants.PredicateDirectionUsage predicateDirection, 
+            StringObject allInstancesQuery, 
+            StringObject countAllInstancesQuery,
+            Vector<UserQueryConfiguration> sequences) {
 
-            //select case
-            basicQuery += "SELECT DISTINCT";
-            basicQuery += " ?resultInstaceUri";
-            if(includeOutputLabel){
-                basicQuery+=" ?resultInstaceLabel";
-            }
-
-            basicQuery += endLine;
-            //where case
-            basicQuery += "WHERE" + endLine;
-            basicQuery += "{" + endLine;
-            basicQuery += "    ?resultInstaceUri a crm:"+targetClass+" ." + endLine;
-            
-            if(includeOutputLabel){
-                basicQuery += tabSpace+"OPTIONAL { ?resultInstaceUri rdfs:label ?resultInstaceLabel . } " + endLine;
-            }
-            basicQuery += "}";
-        
-            System.out.println(basicQuery);
-        
-        return basicQuery;
-    }
-    */
-    
-    private void getClassIdentifiersOfRawQueries(Vector<String> queries, Hashtable<String, Vector<String>> classIds) {
-
-        for (int qIndex = 0; qIndex < queries.size(); qIndex++) {
-
-            String query = queries.get(qIndex);
-
-            List<String> matchList = new ArrayList<String>();
-            try {
-                Pattern regex = Pattern.compile("###CID:[^#]+###", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-                Matcher regexMatcher = regex.matcher(query);
-                while (regexMatcher.find()) {
-                    matchList.add(regexMatcher.group().replaceAll("###", ""));
-                }
-            } catch (PatternSyntaxException ex) {
-                // Syntax error in the regular expression
-            }
-            try {
-                Pattern regex = Pattern.compile("###PID:[^#]+###", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-                Matcher regexMatcher = regex.matcher(query);
-                while (regexMatcher.find()) {
-                    matchList.add(regexMatcher.group().replaceAll("###", ""));
-                }
-            } catch (PatternSyntaxException ex) {
-                // Syntax error in the regular expression
-            }
-
-            for (int i = 0; i < matchList.size(); i++) {
-                if (classIds.containsKey(matchList.get(i)) == false) {
-                    //System.out.println("Adding " + matchList.get(i));
-                    classIds.put(matchList.get(i), new Vector<String>());
-                }
-            }
-        }
-
-    }
-
-    private String retrieveDirectOrInversePredicate(String predIdentifier,boolean preferInverse, 
-            Vector<String> predicateNames, Hashtable<String, String> validCidocNamespacesDeclared) {
-        if (predicateNames == null || predicateNames.size() == 0) {
-            return "";
-        }
-
-        ApiConstants.TargetSourceChoice currenctChoice = this.imClass.userConfig.getComparisonMode();
-        String inverseStr = "";
-        String returnStr = "";
-        for (int i = 0; i < predicateNames.size(); i++) {
-
-            
-            String str = predicateNames.get(i);
-            
-            Enumeration<String> validCidocNamespacesDeclaredEnum = validCidocNamespacesDeclared.keys();
-            while (validCidocNamespacesDeclaredEnum.hasMoreElements()) {
-                String tempStr = str;
-                String checkNsPrefix = validCidocNamespacesDeclaredEnum.nextElement();
-                String checkNs = validCidocNamespacesDeclared.get(checkNsPrefix);
-                
-                tempStr = tempStr.replace(checkNs, "");
-                if(tempStr.startsWith(predIdentifier) ==false 
-                        && currenctChoice== ApiConstants.TargetSourceChoice.CLAROS 
-                        && checkNs.equals("http://purl.org/NET/crm-owl#")){
-                    tempStr = tempStr.replace("http://erlangen-crm.org/091217/", "");
-                }
-                if (tempStr.startsWith(predIdentifier)) {
-                    char separatorOrInverseIndicator = tempStr.toLowerCase().charAt(tempStr.indexOf(predIdentifier) + predIdentifier.length());
-
-                    if (Character.isDigit(separatorOrInverseIndicator)) {
-                        continue;
-                    }
-
-                    if (separatorOrInverseIndicator == 'i' || separatorOrInverseIndicator == 'b') {
-                        inverseStr = checkNsPrefix + ":" + tempStr;
-                        break;
-                    } else {
-                        returnStr = checkNsPrefix + ":" + tempStr;
-                        break;
-                    }
-                }
-
-            }
-
-        }
-        
-        if(returnStr.length()==0 && inverseStr.length()==0 && predicateNames.size()>0){
-            String tempStr = predicateNames.get(0);
-            if(tempStr.length()>0){
-                return "<"+tempStr+">";
-            }
-        }
-
-        if(preferInverse){
-            if(inverseStr.length()>0){
-                return inverseStr;
-            }
-        }
-        
-        if (returnStr.length() > 0) {
-            return returnStr;
-        } else {
-            return inverseStr;
-        }
-    }
-
-    
-    int prepareQueries(Hashtable<String, String> validCidocNamespacesDeclared, Model targetModel, ApiConstants.PredicateDirectionUsage predicateDirection, StringObject allInstancesQuery, Vector<UserQueryConfiguration> sequences) {
-
-        if(IMAPIClass.ExtentedMessagesEnabled){
+        if(IMAPIClass.DEBUG){
             System.out.println("Retrieving Class and Predicate Names that will be used in the queries");
         }
-        ApiConstants.TargetSourceChoice currentChoice = this.imClass.userConfig.getComparisonMode();
-        allInstancesQuery.setString(this.imClass.qWeightsConfig.getTheAllInstancesQuery());
-        
+        String dbType = "";
+        String idPredicateStr = "";
+         
+        OnlineDatabase db = this.imClass.conf.getOnlineDb(currentChoice);
+        if(db!=null){
+            dbType=db.getDbType();
+            idPredicateStr = db.getIdPredicate();
+        }
+        allInstancesQuery.setString(this.imClass.qWeightsConfig.getTheAllInstancesQuery(dbType,idPredicateStr));
+        countAllInstancesQuery.setString(this.imClass.qWeightsConfig.getCountAllInstancesQuery());
         //sequences.clear();
         //sequences.addAll(this.imClass.qWeightsConfig.getUserSequences());
         
         Vector<String> allStrsForTranslation = new Vector<String>();
         allStrsForTranslation.add(allInstancesQuery.getString());
-        
+        allStrsForTranslation.add(countAllInstancesQuery.getString());
         for (int seqIndex = 0; seqIndex < sequences.size(); seqIndex++) {
             String[] stepQueries = sequences.get(seqIndex).getSortedQueriesCopy();
             for (int stepIndex = 0; stepIndex < stepQueries.length; stepIndex++) {
@@ -558,6 +449,10 @@ class QueryBuilder {
             }
 
             //clear whitespace 
+            while (returnStr.contains("  ")) {
+                returnStr = returnStr.replace("  ", " ");
+            }
+            //clear whitespace 
             while (returnStr.contains("\t")) {
                 returnStr = returnStr.replace("\t", " ");
             }
@@ -584,6 +479,7 @@ class QueryBuilder {
                         }
                     } catch (PatternSyntaxException ex) {
                         // Syntax error in the regular expression
+                        Utilities.handleException(ex);
                     }
 
                     if (ResultString == null) {
@@ -652,6 +548,10 @@ class QueryBuilder {
                 allInstancesQuery.setString(returnStr);
             }
             
+            if(countAllInstancesQuery.getString().trim().equals(initialStr.trim())){
+                countAllInstancesQuery.setString(returnStr);
+            }
+            
             
             for (int seqIndex = 0; seqIndex < sequences.size(); seqIndex++) {                
                 
@@ -682,15 +582,198 @@ class QueryBuilder {
         Collections.sort(printReplacements);
         
         //System.out.println("Class and Predicate Names retrieval ended.");
-        if(IMAPIClass.ExtentedMessagesEnabled){
+        if(IMAPIClass.DEBUG){
             System.out.println(" " + printReplacements.toString().replace("[", "").replace("]","").replaceAll(",", "\n").replaceAll(" +", " ").trim()+"\n");
         }
         return ApiConstants.IMAPISuccessCode;
     }
+   
+    private void getClassIdentifiersOfRawQueries(Vector<String> queries, Hashtable<String, Vector<String>> classIds) {
+
+        for (int qIndex = 0; qIndex < queries.size(); qIndex++) {
+
+            String query = queries.get(qIndex);
+
+            List<String> matchList = new ArrayList<String>();
+            try {
+                Pattern regex = Pattern.compile("###CID:[^#]+###", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                Matcher regexMatcher = regex.matcher(query);
+                while (regexMatcher.find()) {
+                    matchList.add(regexMatcher.group().replaceAll("###", ""));
+                }
+            } catch (PatternSyntaxException ex) {
+                // Syntax error in the regular expression
+                Utilities.handleException(ex);
+            }
+            try {
+                Pattern regex = Pattern.compile("###PID:[^#]+###", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                Matcher regexMatcher = regex.matcher(query);
+                while (regexMatcher.find()) {
+                    matchList.add(regexMatcher.group().replaceAll("###", ""));
+                }
+            } catch (PatternSyntaxException ex) {
+                // Syntax error in the regular expression
+                Utilities.handleException(ex);
+            }
+
+            for (int i = 0; i < matchList.size(); i++) {
+                if (classIds.containsKey(matchList.get(i)) == false) {
+                    //System.out.println("Adding " + matchList.get(i));
+                    classIds.put(matchList.get(i), new Vector<String>());
+                }
+            }
+        }
+
+    }
+
+    private String retrieveDirectOrInversePredicate(String predIdentifier,boolean preferInverse, 
+            Vector<String> predicateNames, Hashtable<String, String> validCidocNamespacesDeclared) {
+        if (predicateNames == null || predicateNames.size() == 0) {
+            return "";
+        }
+
+        ApiConstants.TargetSourceChoice currenctChoice = this.imClass.userConfig.getComparisonMode();
+        String inverseStr = "";
+        String returnStr = "";
+        for (int i = 0; i < predicateNames.size(); i++) {
+
+            
+            String str = predicateNames.get(i);
+            
+            Enumeration<String> validCidocNamespacesDeclaredEnum = validCidocNamespacesDeclared.keys();
+            while (validCidocNamespacesDeclaredEnum.hasMoreElements()) {
+                String tempStr = str;
+                String checkNsPrefix = validCidocNamespacesDeclaredEnum.nextElement();
+                String checkNs = validCidocNamespacesDeclared.get(checkNsPrefix);
+                
+                tempStr = tempStr.replace(checkNs, "");
+                if(tempStr.startsWith(predIdentifier) ==false 
+                        && currenctChoice== ApiConstants.TargetSourceChoice.CLAROS 
+                        && checkNs.equals("http://purl.org/NET/crm-owl#")){
+                    tempStr = tempStr.replace("http://erlangen-crm.org/091217/", "");
+                }
+                if (tempStr.startsWith(predIdentifier)) {
+                    char separatorOrInverseIndicator = tempStr.toLowerCase().charAt(tempStr.indexOf(predIdentifier) + predIdentifier.length());
+
+                    if (Character.isDigit(separatorOrInverseIndicator)) {
+                        continue;
+                    }
+
+                    if (separatorOrInverseIndicator == 'i' || separatorOrInverseIndicator == 'b') {
+                        inverseStr = checkNsPrefix + ":" + tempStr;
+                        break;
+                    } else {
+                        returnStr = checkNsPrefix + ":" + tempStr;
+                        break;
+                    }
+                }
+
+            }
+
+        }
+        
+        if(returnStr.length()==0 && inverseStr.length()==0 && predicateNames.size()>0){
+            String tempStr = predicateNames.get(0);
+            if(tempStr.length()>0){
+                return "<"+tempStr+">";
+            }
+        }
+
+        if(preferInverse){
+            if(inverseStr.length()>0){
+                return inverseStr;
+            }
+        }
+        
+        if (returnStr.length() > 0) {
+            return returnStr;
+        } else {
+            return inverseStr;
+        }
+    }
+
     
-    static String replaceFilteringPlaceHoldersForInstances(String initialQuery,String currentStepParameterName,Vector<String> replacementValues){
+    static String replaceFilteringPlaceHolders(String initialQuery, String filterPlaceHolder, String currentStepParameterName, Vector<String> replacementValues){
         String returnStr = initialQuery;
-        if(returnStr.contains(QueryBuilder.filterUriPlaceHolder) && replacementValues!=null && replacementValues.size()>0){
+        
+        if(filterPlaceHolder.equals(ApiConstants.filter_VALUES_placeHolder) ==false && filterPlaceHolder.equals(ApiConstants.filter_STARTING_URIS_placeHolders)==false){
+            System.out.println("DEBUG: The only acceptable values for replaceFilteringPlaceHolders function are: " + ApiConstants.filter_STARTING_URIS_placeHolders +" and " + ApiConstants.filter_VALUES_placeHolder);
+            return returnStr;
+        }
+        
+        if(returnStr.contains(filterPlaceHolder) && replacementValues!=null && replacementValues.size()>0){
+            
+            String replaceMent = " FILTER ( ";
+            for(int p =0; p< replacementValues.size(); p++){
+                if(p>0){
+                    replaceMent += " || \n ";
+                }
+                
+                replaceMent +="?"+currentStepParameterName + " = <"+replacementValues.get(p)+">";
+            }
+            replaceMent +=" ) .\n";
+            
+            returnStr = returnStr.replace(filterPlaceHolder, replaceMent);
+        }
+        else{
+            returnStr = returnStr.replace(filterPlaceHolder, "");
+        }
+        
+        return returnStr;
+    }
+    
+    //<editor-fold defaultstate="collapsed" desc="Abandoned not necessarily working code">
+    /* 
+    
+    
+    static String replaceInstancesFilteringPlaceHolders(String initialQuery, String currentStepParameterName,long minimumIdVal,long maximumIdVal){
+        String returnStr = initialQuery;
+        if(returnStr.contains(ApiConstants.filter_STARTING_URIS_placeHolders)){
+            
+            String replaceMent = " ?resultInstaceUri <http://www.ontotext.com/owlim/entity#id> ?idStr . \n FILTER ( ?idStr >= "+minimumIdVal +" && ?idStr <= "+ maximumIdVal +" ) . \n" ;
+            
+            
+            //ANOTHER POLICY
+            //String replaceMent = "  {  SELECT ?"+currentStepParameterName+" \n"+
+            //        "     { \n"+
+            //        "         ?"+currentStepParameterName + " a ?anyclass . \n";//FILTER ( \n";
+            
+            //for(int p =0; p< replacementValues.size(); p++){
+            //    if(p>0){
+            //        replaceMent += "         UNION \n";
+            //    }
+            //    replaceMent += "         { FILTER ( ?"+currentStepParameterName + " = <"+replacementValues.get(p)+"> ). } \n";
+            //}
+            //replaceMent +="     } \n  }\n";
+            
+            
+            //ANOTHER POLICY
+            //String replaceMent = "";
+            //for(int p =0; p< replacementValues.size(); p++){
+            //    if(p>0){
+            //        replaceMent += " UNION \n";
+            //    }
+            //    replaceMent+=" { SELECT ?"+currentStepParameterName+" "+
+            //        " { "+
+            //        " ?"+currentStepParameterName + " a ?anyclass . ";//FILTER ( \n";
+            //    replaceMent += " FILTER ( ?"+currentStepParameterName + " = <"+replacementValues.get(p)+"> ).  ";
+            //    replaceMent +=" } }\n";
+            //}
+            
+            
+            returnStr = returnStr.replace(ApiConstants.filter_STARTING_URIS_placeHolders, replaceMent);
+        }
+        else{
+            returnStr = returnStr.replace(ApiConstants.filter_STARTING_URIS_placeHolders, "");
+        }
+        
+        return returnStr;
+    }
+    
+    
+    static String replaceInstancesFilteringPlaceHolders11(String initialQuery, String currentStepParameterName, Vector<String> replacementValues){
+        String returnStr = initialQuery;
+        if(returnStr.contains(ApiConstants.filter_STARTING_URIS_placeHolders) && replacementValues!=null && replacementValues.size()>0){
             
             String replaceMent = " FILTER ( ";
             for(int p =0; p< replacementValues.size(); p++){
@@ -703,33 +786,18 @@ class QueryBuilder {
             replaceMent +=" ) .\n";
             
             
-            /*
-            String replaceMent = "";
-            for(int p =0; p< replacementValues.size(); p++){
-                if(p>0){
-                    replaceMent += " UNION \n";
-                }
-                replaceMent+=" { SELECT ?"+currentStepParameterName+" "+
-                    " { "+
-                    " ?"+currentStepParameterName + " ?anypred ?anyclass . ";//FILTER ( \n";
-            
-            
-                
-                replaceMent += " FILTER ( ?"+currentStepParameterName + " = <"+replacementValues.get(p)+"> ).  ";
-                replaceMent +=" } }\n";
-            }
-            */
-            returnStr = returnStr.replace(QueryBuilder.filterUriPlaceHolder, replaceMent);
+            returnStr = returnStr.replace(ApiConstants.filter_STARTING_URIS_placeHolders, replaceMent);
         }
         else{
-            returnStr = returnStr.replace(QueryBuilder.filterUriPlaceHolder, "");
+            returnStr = returnStr.replace(ApiConstants.filter_STARTING_URIS_placeHolders, "");
         }
+        
         return returnStr;
     }
     
-    static String replaceFilteringPlaceHolders(String initialQuery,String currentStepParameterName, Vector<String> replacementValues){
+    static String replaceFilteringPlaceHoldersForInstances22(String initialQuery,String currentStepParameterName,Vector<String> replacementValues){
         String returnStr = initialQuery;
-        if(returnStr.contains(QueryBuilder.filterUriPlaceHolder) && replacementValues!=null && replacementValues.size()>0){
+        if(returnStr.contains(ApiConstants.filter_VALUES_placeHolder) && replacementValues!=null && replacementValues.size()>0){
             
             String replaceMent = " FILTER ( ";
             for(int p =0; p< replacementValues.size(); p++){
@@ -741,64 +809,13 @@ class QueryBuilder {
             }
             replaceMent +=" ) .\n";
             
-            /*
-            String replaceMent = "  {  SELECT ?"+currentStepParameterName+" \n"+
-                    "     { \n"+
-                    "         ?"+currentStepParameterName + " a ?anyclass . \n";//FILTER ( \n";
-            
-            for(int p =0; p< replacementValues.size(); p++){
-                if(p>0){
-                    replaceMent += "         UNION \n";
-                }
-                replaceMent += "         { FILTER ( ?"+currentStepParameterName + " = <"+replacementValues.get(p)+"> ). } \n";
-            }
-            
-            replaceMent +="     } \n  }\n";
-            */
-            /*
-            String replaceMent = "";
-            for(int p =0; p< replacementValues.size(); p++){
-                if(p>0){
-                    replaceMent += " UNION \n";
-                }
-                replaceMent+=" { SELECT ?"+currentStepParameterName+" "+
-                    " { "+
-                    " ?"+currentStepParameterName + " a ?anyclass . ";//FILTER ( \n";
-            
-            
-                
-                replaceMent += " FILTER ( ?"+currentStepParameterName + " = <"+replacementValues.get(p)+"> ).  ";
-                replaceMent +=" } }\n";
-            }
-            */
-            
-            returnStr = returnStr.replace(QueryBuilder.filterUriPlaceHolder, replaceMent);
+            returnStr = returnStr.replace(ApiConstants.filter_VALUES_placeHolder, replaceMent);
         }
         else{
-            returnStr = returnStr.replace(QueryBuilder.filterUriPlaceHolder, "");
+            returnStr = returnStr.replace(ApiConstants.filter_VALUES_placeHolder, "");
         }
-        
         return returnStr;
     }
-    
-    static Vector<String> collectSequenctiallyAsubsetOfValues(int startindex, Vector<String> targetVals){
-        Vector<String> returnVals = new Vector<String>();
-        
-        int maxIndex =targetVals.size(); 
-        if(startindex<targetVals.size()){
-            for(int i = 0; i< ApiConstants.UriFilterStepCount; i++){
-                
-                if((startindex+i)>=maxIndex){
-                    break;
-                }
-                else{
-                    returnVals.add(targetVals.get(i+startindex));
-                }
-                
-                
-            }
-        }
-        
-        return returnVals;
-    }
+    */
+//</editor-fold>    
 }

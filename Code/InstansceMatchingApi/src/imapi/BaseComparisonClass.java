@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
-import static imapi.IMAPIClass.AcceptUriEquality;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Enumeration;
@@ -38,8 +52,7 @@ class BaseComparisonClass {
         strSimilarity = new StringSimilarity();
     }
 
-    
-    Double combineStringSimilarities(Vector<Double> vec) {
+    private Double combineStringSimilarities(Vector<Double> vec) {
 
         Double tempResult = 0d;
 
@@ -51,13 +64,12 @@ class BaseComparisonClass {
         tempResult = tempResult / vec.size();
 
         //best
-		/*
-         for(int m=0;m<vec.size(); m++){
-         if(vec.get(m)> tempResult){
-         tempResult = vec.get(m);
-         }
-         }
-         */
+	//for(int m=0;m<vec.size(); m++){
+            //if(vec.get(m)> tempResult){
+                //tempResult = vec.get(m);
+            //}
+         //}
+         
         return tempResult;
     }
     
@@ -65,7 +77,7 @@ class BaseComparisonClass {
         Double comparisonResult = 0d;
         
         //uri comparison
-        if(valueType.equals("uri")){
+        if(valueType.equals(ApiConstants.Type_URI)){
             String uriVal = valueToCompare.getValue();
             for(int i=0; i< restOfValues.size(); i++){
                 if(restOfValues.get(i).getValue().equals(uriVal)){
@@ -76,7 +88,7 @@ class BaseComparisonClass {
         }
         
         //literal comparison 
-        if(valueType.equals("literal")){
+        if(valueType.equals(ApiConstants.Type_Literal)){
          
             String otherVal = valueToCompare.getValue().toLowerCase();
             for(int i=0; i< restOfValues.size(); i++){
@@ -110,12 +122,12 @@ class BaseComparisonClass {
         }
         
         //date comparison
-        if(valueType.equals("date")){
+        if(valueType.equals(ApiConstants.Type_Date)){
             
         }
         
         //timespan comparison
-        if(valueType.equals("timespan")){
+        if(valueType.equals(ApiConstants.Type_Timespan)){
             ValueOf_Timespan baseTspan = new ValueOf_Timespan(valueToCompare.getValue());
             
             if(baseTspan.startDate==null || baseTspan.endDate==null){
@@ -156,28 +168,8 @@ class BaseComparisonClass {
         return comparisonResult;
     }
     
-    
-    public int calculateFinalSimilarity(SequenceSimilarityResultVector similarities, double denominator) {
+    int calculateFinalSimilarity(SequenceSimilarityResultVector similarities, double denominator) {
         Double result = 0d;
-        
-        
-        /*
-        for (int i = 0; i < similarities.size(); i++) {
-            SequenceSimilarityResult pair = similarities.get(i);
-
-            
-            if(AcceptUriEquality){
-                //uri equality of instances
-                if(pair.getSequenceId()==0){
-                    //System.out.println("Found sequecne with id =0");
-                    return 100;
-                }
-            }
-            
-        
-        }
-        */
-        
         
         int maxSequences = this.imClass.userConfig.getNumberOfSequences();
         
@@ -207,28 +199,5 @@ class BaseComparisonClass {
 
         return tempInt;
     }
-    /*
-    public int calculateFinalSimilarity(Vector<PredicateWeightPair> similarities, float denominator) {
-        float result = 0;
-
-        for (int i = 0; i < similarities.size(); i++) {
-            PredicateWeightPair pair = similarities.get(i);
-
-            if (pair.getPredicate() == null) {
-                //CBIMClass.AcceptUriEquality is not needed here as this should alredy have filtered out the case where 
-                //pred is null				
-                return 100;
-            } else {
-                float weight = pair.getWeight().floatValue();
-                result += weight * pair.getSimilarity();
-
-            }
-        }
-
-        result = result / denominator;
-
-        int tempInt = (int) (result * 100);
-
-        return tempInt;
-    }*/
+    
 }

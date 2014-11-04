@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,9 +13,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
+
+import imapi.ApiConstants;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -51,26 +69,42 @@ class UserConfigurationClass {
     private final String AttributeNameForParamName = "name";
     
     private final String AttributeOfInputFileForPredicateDirectionUsage = "PredicateDirection";
-    //private final String XpathForDatabasePredicateDirectionUsage = "/Root/TargetOnlineDatabaseConfiguration/@PredicateDirection";
     
     private final String XPathForMinimumLiteralSimilarity = "/Root/literalMinimumSimilarityValue";
     private static final String XPathforBaseClass = "/Root/QuerySequencesConfiguration/@BaseClassID";
     
     private Double minimumLiterlSimilarity = 0d;
+    private Double ResultsThreshold = 0d;    
+    private Vector<UserQueryConfiguration> userQueryConfigs = new Vector<UserQueryConfiguration>();
+    private ApiConstants.TargetSourceChoice ComparisonMode; 
+    private Vector<CidocCrmCompatibleFile> SourceInputFiles = new Vector<CidocCrmCompatibleFile>();    
+    private Vector<CidocCrmCompatibleFile> TargetInputFiles = new Vector<CidocCrmCompatibleFile>();
     
-    Double getMinimumLiteralSimilarity(){
+    
+    private int errCode = ApiConstants.IMAPISuccessCode;
+    private String errorMessage = "";
+
+    public int getErrorCode() {
+        return this.errCode;
+    }
+    public String getErrorMessage() {
+        return this.errorMessage;
+    }
+    private void setErrorMessage(int errorCode, String errorMsg) {
+        this.errCode = errorCode;
+        this.errorMessage = errorMsg;     
+    }
+    
+    
+    public Double getMinimumLiteralSimilarity(){
         return this.minimumLiterlSimilarity;
     }
     
-    
-    private Vector<UserQueryConfiguration> userQueryConfigs = new Vector<UserQueryConfiguration>();
-    
-    int getNumberOfSequences(){
+    public int getNumberOfSequences(){
         return this.userQueryConfigs.size();
     }
     
-    
-    Vector<UserQueryConfiguration> getUserQueriesCopy(){
+    public Vector<UserQueryConfiguration> getUserQueriesCopy(){
         Vector<UserQueryConfiguration> returnVec  = new Vector<UserQueryConfiguration>();
         for(int i=0; i<this.userQueryConfigs.size(); i++){
             returnVec.add(this.userQueryConfigs.get(i).copy());
@@ -79,7 +113,7 @@ class UserConfigurationClass {
         return returnVec;
     }
     
-    double getWeightAtUserQueryIndex(int index){
+    public double getWeightAtUserQueryIndex(int index){
         if(index>=0 && index< this.userQueryConfigs.size()){
             return this.userQueryConfigs.get(index).getWeight();
         }
@@ -88,7 +122,7 @@ class UserConfigurationClass {
         }
     }
     
-    String getMnemonicAtUserQueryIndex(int index){
+    public String getMnemonicAtUserQueryIndex(int index){
         if(index>=0 && index< this.userQueryConfigs.size()){
             return this.userQueryConfigs.get(index).getMnemonic();
         }
@@ -97,39 +131,23 @@ class UserConfigurationClass {
         }
     }
     
-    
-    
-    //private fields
-    private Double ResultsThreshold = 0d;
-    
-    private ApiConstants.TargetSourceChoice ComparisonMode; 
-    //private boolean isTargetDatabaseUsingInversePredicates = false;
-    
-    private Vector<CidocCrmCompatibleFile> SourceInputFiles = new Vector<CidocCrmCompatibleFile>();    
-    private Vector<CidocCrmCompatibleFile> TargetInputFiles = new Vector<CidocCrmCompatibleFile>();
-    
-    Double getResultsThreshold(){
+    public Double getResultsThreshold(){
         return this.ResultsThreshold;
     }
     
-    
-    ApiConstants.TargetSourceChoice getComparisonMode(){
+    public ApiConstants.TargetSourceChoice getComparisonMode(){
         return this.ComparisonMode;
     }
-    /*
-    boolean getIsTargetDatabaseUsingInversePredicates(){
-        return this.isTargetDatabaseUsingInversePredicates;
-    }
-    */
-    Vector<CidocCrmCompatibleFile> getSourceInputFiles(){
+    
+    public Vector<CidocCrmCompatibleFile> getSourceInputFiles(){
         return new Vector<CidocCrmCompatibleFile>(this.SourceInputFiles);
     }
     
-    Vector<CidocCrmCompatibleFile> getTargetInputFiles(){
+    public Vector<CidocCrmCompatibleFile> getTargetInputFiles(){
         return new Vector<CidocCrmCompatibleFile>(this.TargetInputFiles);
     }
     
-    static String getBaseConfigurationClass(String userConfigurationXmlFile){
+    public static String getBaseConfigurationClass(String userConfigurationXmlFile){
         String returnVal = "";
         
         
@@ -180,32 +198,20 @@ class UserConfigurationClass {
         
           
         } catch (ParserConfigurationException e) {
-            
-            String tempMsg = "ParserConfigurationException occured:\r\n" + e.getMessage();
-            System.out.println(tempMsg);         
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (XPathExpressionException e) {
-            
-            String tempMsg = "XPathExpressionException occured:\r\n" + e.getMessage();
-            System.out.println(tempMsg);         
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (SAXException e) {
-            
-            String tempMsg = "SAXException occured:\r\n" + e.getMessage();
-            System.out.println(tempMsg);         
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (IOException e) {
-            
-            String tempMsg = "IOException occured:\r\n" + e.getMessage();
-            System.out.println(tempMsg);         
-            e.printStackTrace();
+            Utilities.handleException(e);
         }  
         
         
         return "";
     }
 
-    String combineBaseAndRelativePath(String basePath, String relativePath){
+    private String combineBaseAndRelativePath(String basePath, String relativePath){
         String finalPath ="";
         String relativePathLocalCopy = relativePath;
         if (basePath == null || basePath.trim().length() == 0) {
@@ -276,7 +282,7 @@ class UserConfigurationClass {
         return finalPath;
     }
     
-    UserConfigurationClass(String baseFilePath, String userConfigurationXmlFile, QueryPrototypeConfigurationClass qClass){
+    public UserConfigurationClass(String baseFilePath, String userConfigurationXmlFile, QueryPrototypeConfigurationClass qClass){
         
         this.setErrorMessage(ApiConstants.IMAPISuccessCode, "");
         
@@ -684,303 +690,29 @@ class UserConfigurationClass {
             }
             
         } catch (ParserConfigurationException e) {
-            printSampleUserConfigurationFile();
+            
             String tempMsg = "ParserConfigurationException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);            
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (XPathExpressionException e) {
-            printSampleUserConfigurationFile();
+            
             String tempMsg = "XPathExpressionException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);            
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (SAXException e) {
-            printSampleUserConfigurationFile();
+            
             String tempMsg = "SAXException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (IOException e) {
-            printSampleUserConfigurationFile();
+            
             String tempMsg = "IOException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);
-            e.printStackTrace();
+            Utilities.handleException(e);
         }
         System.out.println();
     }
     
-    private int errCode = ApiConstants.IMAPISuccessCode;
-
-    int getErrorCode() {
-        return this.errCode;
-    }
-    private String errorMessage = "";
-
-    String getErrorMessage() {
-        return this.errorMessage;
-    }
-
-    private void setErrorMessage(int errorCode, String errorMsg) {
-        this.errCode = errorCode;
-        this.errorMessage = errorMsg;
-        /*if (this.errCode == ApiConstants.IMAPIFailCode) {
-            System.out.println("ERROR occurred: " + errorMsg);
-        }*/
-    }
     
-    
-    static void printSampleUserConfigurationFile(){
-        
-        System.out.println("Error Occured at User Configuration XML file.\r\nSample XML file:");
-        System.out.println("------------------------------------------------------------\n\n");
-        System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-"<Root>\n" +
-"    \n" +
-"    <!-- ResultsThreshold: A decimal Value greater than 0.0 and less than or \n" +
-"         equal to 1.0 determining the threshold that will be used in order \n" +
-"         to qualify matches to the result set \n" +
-"         Suggested value: 0.4\n" +
-"    -->             \n" +
-"    <ResultsThreshold>0.4</ResultsThreshold>    \n" +
-"    \n" +
-"    <!-- literalMinimumSimilarityValue: A decimal Value greater or equal to 0.0 \n" +
-"         and less than or equal to 1.0 determining the threshold that will be \n" +
-"         used in order to qualify matches between literals. Every literal with \n" +
-"         a similarity value less that literalMinimumSimilarityValue will not \n" +
-"         be kept in the result set. It's purpose is to avoid keeping pairs\n" +
-"         with very small similarity especially when comparing with an online database.\n" +
-"         Suggested value: 0.4\n" +
-"    -->    \n" +
-"    <literalMinimumSimilarityValue>0.4</literalMinimumSimilarityValue>\n" +
-"    \n" +
-"    \n" +
-"    <!-- TargetSourceChoice: \n" +
-"         - FILE_COMPARISON: In case comparison is intended to be performed \n" +
-"           between, all SourceInputFiles and all TargetInputFiles.\n" +
-"         - BRITISH_MUSEUM_COLLECTION: In case Comparison is intended to be \n" +
-"           performed between, all SourceInputFiles and the online British Museum\n" +
-"           collection SPARQL endpoint:\n" +
-"           http://collection.britishmuseum.org/sparql\n" +
-"         - CLAROS: In case Comparison is intended to be performed between,\n" +
-"           all SourceInputFiles and the CLAROS SPARQL endpoint:\n" +
-"           http://data.clarosnet.org/sparql/\n" +
-"    \n" +
-"        WARNING!!! CLAROS database does not support inference i.e. \n" +
-"                   subClasses and subProperties are not included in the result \n" +
-"                   set thus predicates used should be exactly these that are \n" +
-"                   used in the database.\n" +
-"                   \n" +
-"                   i.e. If asking for E39_Actor this database will not also \n" +
-"                        qualify the E21_Person instances as it should since \n" +
-"                        E21 is subClassOf E39.\n" +
-"                        Also, if asking for P1 predicate this database will \n" +
-"                        not qualify the P131 predicates as it should since \n" +
-"                        P131 is subPropertyOf P1.\n" +
-"    -->\n" +
-"    <TargetSourceChoice>BRITISH_MUSEUM_COLLECTION</TargetSourceChoice>\n" +
-"    \n" +
-"    <!-- SourceInputFiles / TargetInputFiles:\n" +
-"        - These two elements contain the full path to the files that will be used\n" +
-"          as the source and the target respectively. Files declared inside TargetInputFiles\n" +
-"          elements will only be used if TargetSourceChoice is set to FILE_COMPARISON.\n" +
-"          \n" +
-"          It is recommended that all files contain the minimum set of namespaces\n" +
-"          needed because the program will try to retrieve their schema and find the \n" +
-"          exact name of the predicates that will be used in the queries.\n" +
-"          \n" +
-"                              \n" +
-"          The attibute \"PredicateDirection\" may have the following values:\n" +
-"          - \"direct\"\n" +
-"          - \"inverse\"\n" +
-"          - \"both\" (default value if none declared)\n" +
-"          \n" +
-"          and determines the direction of the predicates that will be used. \n" +
-"          \n" +
-"          i.e. if a query contains predicate with id P1 then:\n" +
-"          - in case of \"direct\":  \"P1_is_identified_by\" will be used\n" +
-"          - in case of \"inverse\": \"P1i_identifies\" will be used\n" +
-"          - in case of \"both\":    \"P1_is_identified_by\" and \"P1i_identifies\" will be used\n" +
-"          \n" +
-"          \n" +
-"          If inference is included in the cidoc compatible namespace of the file\n" +
-"          then \"direct\" choice may be used safely otherwise \"both\" option should be chosen. \n" +
-"         \n" +
-"          e.g. The http://erlangen-crm.org/current/ cidoc compatible namespace\n" +
-"               leads to an owl file that contains statements about inverse \n" +
-"               predicates thus enabling inference in queries. So files using \n" +
-"               this namespace may just use the \"direct\" PredicateDirection option.\n" +
-"               \n" +
-"               The http://www.cidoc-crm.org/cidoc-crm/ does not contain the \n" +
-"               inverse property statemets so the \"both\" PredicateDirection option\n" +
-"               must be used unless user is certain that only one of the two directions\n" +
-"               is used throughout the file. If \"inverse\" option is selected then \n" +
-"               inverse predicates will be used wherever possible meaning that for P3\n" +
-"               predicate which does not have an inverse Property the P3_has_note will \n" +
-"               be used. \n" +
-"    -->\n" +
-"    \n" +
-"    <SourceInputFiles>\n" +
-"        <File PredicateDirection=\"direct\">C:/Users/tzortzak/Desktop/CultureBrokers/testdata/cidoc1.rdf</File>        \n" +
-"        <File PredicateDirection=\"both\">C:/Users/tzortzak/Desktop/CultureBrokers/testdata/cidoc4.rdf</File>\n" +
-"    </SourceInputFiles>    \n" +
-"    \n" +
-"    <TargetInputFiles>        \n" +
-"        <File PredicateDirection=\"both\">C:/Users/tzortzak/Desktop/CultureBrokers/testdata/cidoc6 - Copy.rdf</File> \n" +
-"    </TargetInputFiles>\n" +
-"    \n" +
-"    <!-- \n" +
-"    QuerieSequencesConfiguration:\n" +
-"        \n" +
-"        This XML element includes all the data used in order to extract the \n" +
-"        information of interest. It includes the BaseClassID attribute and an \n" +
-"        arbitary number of \"querysequence\" elements that will be used in order to \n" +
-"        construct the queries that will be performed in each source (file or online db)\n" +
-"        \n" +
-"        \"BaseClassID\" Attribute: It defines the cidoc identifier of the instances \n" +
-"                                 we are interested in and that will serve as the \n" +
-"                                 base for every query performed.\n" +
-"                                 Thus E39 stands for E39_Actor whereas E21 stands \n" +
-"                                 for E21_Person.\n" +
-"        \n" +
-"        Suggested value: E21\n" +
-"        \n" +
-"        \n" +
-"        \n" +
-"        Attributes of \"querysequence\" Element:\n" +
-"        \n" +
-"        - weight:  a decimal value is provided here in order to define the \n" +
-"                   influence of each similar pair to the overall similarity result.\n" +
-"                   it's value is restricted to be greater than or equal to 0.0\n" +
-"                   and less than or equal to 1.0\n" +
-"                   \n" +
-"                   sim_i: the similarity of two instances with different uris\n" +
-"                          based on query sequence i\n" +
-"                   w_i:   the weight of query sequence i\n" +
-"                   \n" +
-"                   The final similarity is calculated using the following algorithm:\n" +
-"                   ( (w_1*sim_1)+(w_2*sim_2)+...+(w_n*sim_n) ) / (w_1+w_2+...+w_n)\n" +
-"                   \n" +
-"                   \n" +
-"        - mnemonic: a character sequence used as id in order to define which query \n" +
-"                    prototype sequence defined in QueryPrototypesConfiguration.xml \n" +
-"                    will be used. \n" +
-"                    \n" +
-"                    Each query sequence defines a set of query steps denoted \n" +
-"                    by letters a,b,c while multiple predicates used in each step \n" +
-"                    are denoted with a numerical suffix to the step variable a1, a2 etc. \n" +
-"                    Each query step is actually a query that results in a set of \n" +
-"                    pairs with the uri of the instance of interst as the one part \n" +
-"                    and the step result as the other part of the pair.\n" +
-"                    \n" +
-"                    For each query sequence similarity is calculated for every step.\n" +
-"                    \n" +
-"                    \n" +
-"                    Currently there are supported 4 query sequence prototypes \n" +
-"                    that are defined in QueryPrototypesConfiguration.xml:\n" +
-"                    \n" +
-"                    \n" +
-"                    1. \"a -> literal\": 1 step defined step A\n" +
-"                       step A:\n" +
-"                       find all literals that are connected to the instances of\n" +
-"                       interest (denoted by BaseClassID attribute above) \n" +
-"                       via the predicate with id \"a\". \n" +
-"                       \n" +
-"                       E.g. a = P3 translates to:\n" +
-"                            a = P3_has_note \n" +
-"                        \n" +
-"                    2. \"(a -> literal) | literal\": 1 step defined step A\n" +
-"                       step A:\n" +
-"                       find all literals that are connected to the instances of\n" +
-"                       interest via the predicate with id \"a\" or the literals that\n" +
-"                       are directly connected to each instance\n" +
-"\n" +
-"                       E.g. a = P1 translates to: \n" +
-"                            a = P1_is_identified_by and /or P1_identifies\n" +
-"                        \n" +
-"                                                                      \n" +
-"                    3. \"(a1 | a1 -> a2) -> b \": 2 steps defined step A and step B\n" +
-"                       step A:\n" +
-"                       find all uris that will be denoted as \"stepAuri\" that are \n" +
-"                       connected to the instances of interest via the predicate \n" +
-"                       with id \"a1\" or via the predicate sequence a1 and then a2.\n" +
-"\n" +
-"                       E.g. a1 = P14 and a2 =P9 translates to: \n" +
-"                            a1 = P14_carried_out_by and /or P14i_performed\n" +
-"                            a2 = P9_consists_of\n" +
-"                            \n" +
-"                       step B:\n" +
-"                       find all uris that will be denoted as \"stepBuri\" that are\n" +
-"                       connected to the instances of interest via the previous \n" +
-"                       \"stepAuri\" results and are followed by the predicate with \n" +
-"                       id \"b\" \n" +
-"\n" +
-"                       E.g. b = P108 translates to:\n" +
-"                            b = P108_has_produced and /or P108i_was_produced_by\n" +
-"                            \n" +
-"                      Thus this query sequence with parameters \n" +
-"                      a1=P14, a2=P9, b=P108 and BaseClassID=E21 \n" +
-"                      will retrieve the uri pairs of persons and objects where \n" +
-"                      the person has participated in the production event of the object.\n" +
-"                                            \n" +
-"                    \n" +
-"                    4. \"a -> b -> timespan(c1 - c2)\" 3 steps defined step A step B and step C\n" +
-"                    step A:\n" +
-"                       find all uris that will be denoted as \"stepAuri\" that are \n" +
-"                       connected to the instances of interest via the predicate \n" +
-"                       with id \"a\"\n" +
-"\n" +
-"                       E.g. a = P98 translates to: \n" +
-"                            a = P98_brought_into_life and /or P98i_was_born\n" +
-"                            \n" +
-"                            \n" +
-"                       step B:\n" +
-"                       find all uris that will be denoted as \"stepBuri\" that are\n" +
-"                       connected to the instances of interest via the previous \n" +
-"                       \"stepAuri\" results and are followed by the predicate with \n" +
-"                       id \"b\" \n" +
-"\n" +
-"                       E.g. b = P4 translates to:\n" +
-"                            b = P4_has_time-span and /or P4i_is_time-span_of\n" +
-"                       \n" +
-"                       step C:\n" +
-"                       find all timespans defined by c1 - c2 that will be denoted \n" +
-"                       as \"stepCtimespan\" which are connected to the instances of \n" +
-"                       interest via the previous \"stepAuri\" results followed by \n" +
-"                       the \"stepBuri\" results and followed by the predicates \n" +
-"                       with id \"c1\" and \"c2\" \n" +
-"\n" +
-"                       E.g. c1 = P82a and c2=P82b translates to:\n" +
-"                            c1 = P82a_begin_of_the_begin \n" +
-"                            c2 = P82b_end_of_the_end\n" +
-"                            \n" +
-"                      Thus this query sequence with parameters \n" +
-"                      a=P98, b=P4, c1=P82a, c2=P82b and BaseClassID=E21 \n" +
-"                      will retrieve the uri pairs of persons and timespans that \n" +
-"                      their birth date is estimated to be.                   \n" +
-"        \n" +
-"    -->\n" +
-"    <QuerieSequencesConfiguration BaseClassID=\"E39\">\n" +
-"        <querysequence weight=\"0.3\" mnemonic=\"a -> b -> timespan(c1 - c2)\">\n" +
-"            <parameter name=\"a\">P98</parameter>            \n" +
-"            <parameter name=\"b\">P4</parameter>            \n" +
-"            <parameter name=\"c1\">P82a</parameter>            \n" +
-"            <parameter name=\"c2\">P82b</parameter>            \n" +
-"        </querysequence>        \n" +
-"        \n" +
-"        <querysequence weight=\"0.2\" mnemonic=\"(a -> label) | label\">\n" +
-"            <parameter name=\"a\">P131</parameter>            \n" +
-"        </querysequence>\n" +
-"        \n" +
-"        <querysequence weight=\"0.1\" mnemonic=\"a -> label\">\n" +
-"            <parameter name=\"a\">P3</parameter>            \n" +
-"        </querysequence>        \n" +
-"\n" +
-"        <querysequence weight=\"0.4\" mnemonic=\"(a1 | a1 -> a2) -> b\">\n" +
-"            <parameter name=\"a1\">P14</parameter>\n" +
-"            <parameter name=\"a2\">P9</parameter>\n" +
-"            <parameter name=\"b\">P108</parameter>\n" +
-"        </querysequence>\n" +
-"        \n" +
-"    </QuerieSequencesConfiguration>\n" +
-"</Root>");                
-    }
     
 }

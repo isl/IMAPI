@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +13,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
+import imapi.ApiConstants;
 import imapi.ApiConstants.PredicateDirectionUsage;
 import java.util.Comparator;
 import java.util.Vector;
@@ -49,7 +65,7 @@ class CidocCrmCompatibleFile implements Comparator<CidocCrmCompatibleFile>, Comp
     public String getPredicateInverseIdSuffix() {
         return this.predicateInverseIdSuffix;
     }
-*/
+    */
     CidocCrmCompatibleFile(String absoluteFilePath, PredicateDirectionUsage predUsage /*, String predIdSeperator, String predInverseIdSuffix*/) {
         this.filePath = absoluteFilePath;
         this.predicatesDirection = predUsage;
@@ -73,17 +89,7 @@ class CidocCrmCompatibleFile implements Comparator<CidocCrmCompatibleFile>, Comp
             }
         }
 
-        if (o1.getFilePath().equals(o2.getFilePath())) {
-            if(ApiConstants.Compare_CidocCrmCompatibleFile_All_fields){
-                
-                if(o1.getPredicateDirectionUsage() != o2.getPredicateDirectionUsage()){
-                    return 1;
-                }
-                /*
-                else{
-                    return -1;
-                } */           
-            }
+        if (o1.getFilePath().equals(o2.getFilePath())) {            
             return 0;
                         
         } else {            
@@ -106,9 +112,6 @@ class CidocCrmCompatibleFile implements Comparator<CidocCrmCompatibleFile>, Comp
 
         CidocCrmCompatibleFile otherObj = (CidocCrmCompatibleFile) obj;
         if (this.getFilePath().equals(otherObj.getFilePath())) {
-            if(ApiConstants.Compare_CidocCrmCompatibleFile_All_fields){
-                return (this.getPredicateDirectionUsage() == otherObj.getPredicateDirectionUsage());
-            }
             return true;
         }
 
@@ -116,10 +119,7 @@ class CidocCrmCompatibleFile implements Comparator<CidocCrmCompatibleFile>, Comp
     }
 
     @Override
-    public int hashCode() {
-        if(ApiConstants.Compare_CidocCrmCompatibleFile_All_fields){
-            return (this.getFilePath() + this.getPredicateDirectionUsage().toString()).hashCode();
-        }
+    public int hashCode() {        
         return this.getFilePath().hashCode();
     }
 

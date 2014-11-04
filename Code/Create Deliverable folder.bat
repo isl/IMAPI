@@ -46,7 +46,7 @@ xcopy InstansceMatchingApi\dist\*.jar %targetDirectory%\ClassesAndLibs
 
 xcopy InstansceMatchingApi\dist\*.txt %targetDirectory%\ClassesAndLibs
 
-xcopy CommonLibs\apache-jena-2.11.2\lib\*.jar %targetDirectory%\ClassesAndLibs\lib
+xcopy CommonLibs\apache-jena-2.12.1\lib\*.jar %targetDirectory%\ClassesAndLibs\lib
 
 xcopy CommonLibs\Gson2.2.4\gson-2.2.4.jar %targetDirectory%\ClassesAndLibs\lib
 

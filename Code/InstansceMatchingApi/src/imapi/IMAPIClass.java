@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
 package imapi;
 
-
-//import Structs.OnlineDatabase;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.query.Query;
@@ -28,6 +42,7 @@ import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.util.FileManager;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -47,35 +62,20 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.jena.atlas.io.IndentedWriter;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-/**
- *
- * @author tzortzak
- */
 public class IMAPIClass {
 
-    static boolean DEBUG = false;
+    static boolean DEBUG = false;    
+    //static boolean ExtentedMessagesEnabled = false;
     
-    static final boolean AcceptUriEquality = true;
-    //static String BMDBcidocNamespace = "http://erlangen-crm.org/current/";
-
-    static boolean ExtentedMessagesEnabled = false;
-    //public static final String SearchMode_Actor = "Actor";
-
     public void disableExtentedMessages() {
-        this.ExtentedMessagesEnabled = false;
+        IMAPIClass.DEBUG = false;
     }
-
     public void enableExtentedMessages() {
-        this.ExtentedMessagesEnabled = true;
+        IMAPIClass.DEBUG = true;
     }
     
     private int errCode = ApiConstants.IMAPIFailCode;
-    String errorMessage = "";
+    private String errorMessage = "";
 
     public int getErrorCode() {
         return this.errCode;
@@ -87,18 +87,42 @@ public class IMAPIClass {
 
     void setErrorMessage(int errorCode, String errorMsg) {
         this.errCode = errorCode;
-        this.errorMessage = errorMsg;
-        /*if (this.errCode == ApiConstants.IMAPIFailCode) {
-            System.out.println("ERROR occurred: " + errorMsg);
-        }*/
+        this.errorMessage = errorMsg;        
     }
     
     
+    int getNumberOfSequences(){
+        if(this.userConfig!=null){
+            return this.userConfig.getNumberOfSequences();
+        }
+        else{
+            return ApiConstants.IMAPIFailCode;
+        }
+    }
+    
+    double getWeightAtUserQueryIndex(int stepPosition){
+        if(this.userConfig!=null){
+            return this.userConfig.getWeightAtUserQueryIndex(stepPosition);
+        }
+        else{
+            return 0d;
+        }
+    }
+    
+    String getMnemonicAtUserQueryIndex(int stepPosition){
+        if(this.userConfig!=null){
+            return this.userConfig.getMnemonicAtUserQueryIndex(stepPosition);
+        }
+        else{
+            return "";
+        }
+    }
+    
 
+    //tools
     ApiConfigClass conf = null;
     UserConfigurationClass userConfig = null;
     QueryPrototypeConfigurationClass qWeightsConfig = null;
-
     
     /**
      * Do not forget to check IMAPIClass's getErrorCode() after initialization
@@ -109,7 +133,7 @@ public class IMAPIClass {
      */
     public IMAPIClass(String baseFilePath, String userConfigurationXmlFile,String queriesConfigurationXmlFile) {
 
-        System.out.println("New IMAPIClass instance created at time:"+java.util.Calendar.getInstance().getTime());
+        System.out.println("New IMAPIClass instance created at time: "+java.util.Calendar.getInstance().getTime());
         this.setErrorMessage(ApiConstants.IMAPISuccessCode, "");
         
         String baseClassIdStr = UserConfigurationClass.getBaseConfigurationClass(userConfigurationXmlFile);
@@ -137,33 +161,26 @@ public class IMAPIClass {
         }       
 
     }
-
     
     
-    public int performComparison() {
+    public int performComparison(Hashtable<Float, Vector<ResultSourceTargetPair>> resultInstances) {
 
-        
+        //Utilities
         DataRetrievalOperations retrieveData = new DataRetrievalOperations(this);
         BaseComparisonClass compClass = new BaseComparisonClass(this);
         
-        //internal structures used
-        Hashtable<Integer, Vector<SourceTargetPair>> finalResults = new Hashtable<Integer, Vector<SourceTargetPair>>();
+        //Internal structures used        
+        SourceDataHolder inputSourceInfo = new SourceDataHolder();        
         Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences = new Hashtable<SourceTargetPair, SequenceSimilarityResultVector>();
-        Hashtable<SourceInstancePair, SequencesVector> inputSourceInfo = new Hashtable<SourceInstancePair, SequencesVector>();
-        Hashtable<SourceInstancePair, SequencesVector> targetSourceInfo = new Hashtable<SourceInstancePair, SequencesVector>();
         
-        
-        //Make check if online db is on
+        //If Comaprison with online database is selected check if it is avaliable
         if(this.userConfig.getComparisonMode()!= ApiConstants.TargetSourceChoice.FILE_COMPARISON){
+        
+            OnlineDatabase db = this.conf.getOnlineDb(this.userConfig.getComparisonMode());
             
-            Vector<OnlineDatabase> dbs = this.conf.getSupportedDatabases();
-            OnlineDatabase db = null;
-            for(int k=0; k< dbs.size(); k++){
-                if(dbs.get(k).getDBChoice() == this.userConfig.getComparisonMode()){
-                    db = dbs.get(k);
-                    break;
-                }
-
+            if(db==null){
+                this.setErrorMessage(ApiConstants.IMAPIFailCode, "Not supported Database");
+                return ApiConstants.IMAPIFailCode;
             }
             
             OnlineDatabaseActions qSource = new OnlineDatabaseActions(this, db);
@@ -172,88 +189,127 @@ public class IMAPIClass {
                 return ret;
             }
         }
-                
+        
+        
         //retrieve all needed namespaces from internet
         Hashtable<String,Model> allRetrievedModels = retrieveData.retrieveAllDeclaredNamespacesModels();
         
-
         //read Source Files info
         Vector<CidocCrmCompatibleFile> inputFiles = this.userConfig.getSourceInputFiles();
         for(int inputFileIndex =0; inputFileIndex<inputFiles.size(); inputFileIndex++){
             
             CidocCrmCompatibleFile inputFile = inputFiles.get(inputFileIndex);
-            int ret = retrieveData.retrieveDataFromFile(inputFile, allRetrievedModels, inputSourceInfo);            
-            if(ret!=ApiConstants.IMAPISuccessCode){
-                return ret;
+            try{
+                int ret = retrieveData.retrieveDataFrom_SourceFile(inputFile, allRetrievedModels, inputSourceInfo);            
+
+                if(ret!=ApiConstants.IMAPISuccessCode){
+                    return ret;
+                }
             }
-            //System.out.println("=======================================");
+            catch(FileNotFoundException ex){
+                Utilities.handleException(ex);
+                return ApiConstants.IMAPIFailCode;
+            }
+            if(inputFileIndex < (inputFiles.size()-1));
+            System.out.println("=======================================");
         }
         
+        int totalNumberOfSourceInstanceValuesFound = 0;
+        Enumeration<String> fileEnum = inputSourceInfo.keys();
+        while(fileEnum.hasMoreElements()){
+            String fpath = fileEnum.nextElement();
+            totalNumberOfSourceInstanceValuesFound += inputSourceInfo.get(fpath).keySet().size();
+        }
+        
+        //print what data was found in source files
         System.out.println("\n\n============================================================");
         System.out.println("============================================================");
         System.out.println("============================================================");
-        //print what data was found
-        System.out.println("Found " + inputSourceInfo.keySet().size() + " instances in all \"\"SOURCE\"\" input files.");
+        System.out.println("Found " + totalNumberOfSourceInstanceValuesFound + " instances in all \"\"SOURCE\"\" input files.");
         printSourceInfo(inputSourceInfo);
         
-                
+        /*
+        if(IMAPIClass.DEBUG){
+            
+            if(inputSourceInfo!=null){
+                System.out.println("Found: " + inputSourceInfo.size() +" instances.");
+                return ApiConstants.IMAPISuccessCode;
+            }
+        }
+        
+        */
+        //make an analysis if quick method can be followed
+        Utilities u = new Utilities(this);
+        Vector<Boolean>  canQuickFilteringMethodBeFollowedForeachSequence = new Vector<Boolean>();        
+        u.canAllSequencesFollowFastApproach(this.userConfig.getUserQueriesCopy(), inputSourceInfo, canQuickFilteringMethodBeFollowedForeachSequence);
+        
         //Read Info from Target Files or Online Database
         System.out.println("\n=======================================");
         System.out.println("=======================================");
         System.out.println("=======================================\n\n");
         
-        ApiConstants.TargetSourceChoice comparisonChoice  = this.userConfig.getComparisonMode();        
-        System.out.println("Starting queries on TARGET source: "+comparisonChoice.toString()+"\n\n");
+       
         
+        ApiConstants.TargetSourceChoice comparisonChoice  = this.userConfig.getComparisonMode();             
+        System.out.println("Starting queries on TARGET source: "+comparisonChoice.toString()+"\n\n");
+        boolean targetDataCollectedCorrectly = false;
         switch(comparisonChoice){
             case FILE_COMPARISON:{
                 Vector<CidocCrmCompatibleFile> targetFiles = this.userConfig.getTargetInputFiles();
                 for(int targetFileIndex =0; targetFileIndex<targetFiles.size(); targetFileIndex++){
 
                     CidocCrmCompatibleFile targetFile = targetFiles.get(targetFileIndex);
-                    int ret = retrieveData.retrieveDataFromFileAndCollectSimilarities(targetFile,allRetrievedModels, inputSourceInfo, targetSourceInfo, pairSimilaritiesInSequences);            
-                    if(ret!=ApiConstants.IMAPISuccessCode){
-                        return ret;
+                    try{
+                        int ret = retrieveData.retrieveDataFrom_TargetFileAndCollectSimilarities(targetFile, allRetrievedModels, inputSourceInfo,canQuickFilteringMethodBeFollowedForeachSequence, pairSimilaritiesInSequences);
+                        if(ret==ApiConstants.IMAPISuccessCode){
+                            targetDataCollectedCorrectly = true;
+                        }
+                        else{
+                            return ret;
+                        }   
+                    }
+                    catch(FileNotFoundException ex){
+                        Utilities.handleException(ex);
+                        return ApiConstants.IMAPIFailCode;
                     }
                     
-                }
-                
+                }                
                 break;
             }
-            case CLAROS:            
-            case BRITISH_MUSEUM_COLLECTION:{
-                Vector<OnlineDatabase> dbs = this.conf.getSupportedDatabases();
-                OnlineDatabase db = null;
-                for(int k=0; k< dbs.size(); k++){
-                    if(dbs.get(k).getDBChoice() == comparisonChoice){
-                        db = dbs.get(k);
-                        break;
-                    }
-                    
-                }
-                
-                int ret = retrieveData.retrieveDataFromOnlineDBAndCollectSimilarities(db,allRetrievedModels, inputSourceInfo, targetSourceInfo, pairSimilaritiesInSequences);
-                if(ret!=ApiConstants.IMAPISuccessCode){
-                    return ret;
-                }
-                break;
-            }
+            // a target online db is selected
             default:{
-                this.setErrorMessage(ApiConstants.IMAPIFailCode, "TargetSourceChoice not set correctly check user configuration xml file again.");
-                return ApiConstants.IMAPIFailCode;
+                OnlineDatabase db = this.conf.getOnlineDb(comparisonChoice);
+                if(db==null){
+                    this.setErrorMessage(ApiConstants.IMAPIFailCode, "TargetSourceChoice not set correctly check user configuration xml file again.");
+                    return ApiConstants.IMAPIFailCode;
+                }
+                else{
+                    
+                    /*
+                    if(db.getDbType().equals("owlim")){
+                        int ret = retrieveData.retrieveDataFrom_OWLIM_DB(db,allRetrievedModels, inputSourceInfo, pairSimilaritiesInSequences);
+                        if(ret==ApiConstants.IMAPISuccessCode){
+                            targetDataCollectedCorrectly = true;
+                        }
+                    }
+                    else{
+                        */
+                        int ret = retrieveData.retrieveDataFrom_OnlineDatabaseAndCollectSimilarities(db, allRetrievedModels, inputSourceInfo,canQuickFilteringMethodBeFollowedForeachSequence, pairSimilaritiesInSequences);
+                        if(ret==ApiConstants.IMAPISuccessCode){
+                            targetDataCollectedCorrectly = true;
+                        }
+                    //}
+                    
+                    
+                }
+                break;
+                
             }
         }
         
-        if(ApiConstants.KeepandPresentAllTargetDataFound){
-            //print what data was found
-            System.out.println("\n\nFound " + targetSourceInfo.keySet().size() + " RELEVANT instances in all \"\"TARGET\"\" input files.");
-            printSourceInfo(targetSourceInfo);
-        }
         inputSourceInfo = null;
-        targetSourceInfo = null;
+        
         //start comparing
-        
-        
         //find out the denominator in order to normalize results
         double similarityDenominator = 0;
         
@@ -290,39 +346,56 @@ public class IMAPIClass {
                 calculatedSimilarity = compClass.calculateFinalSimilarity(similarities, similarityDenominator);
             }
             if (calculatedSimilarity >= (userConfig.getResultsThreshold() * 100)) {
-                if (finalResults.containsKey(calculatedSimilarity)) {
-                    finalResults.get(calculatedSimilarity).add(pair);
+                
+                
+                float floatVal = (float)((float) calculatedSimilarity / 100f);
+                SequenceSimilarityResultVector tripVec = pairSimilaritiesInSequences.get(pair);
+                
+                if (resultInstances.containsKey(floatVal)) {
+                    ResultSourceTargetPair newVal = new ResultSourceTargetPair(pair, tripVec);                    
+                    resultInstances.get(floatVal).add(newVal);
                 } else {
-                    Vector<SourceTargetPair> newVec = new Vector<SourceTargetPair>();
-                    newVec.add(pair);
-                    finalResults.put(calculatedSimilarity, newVec);
+                    Vector<ResultSourceTargetPair> newVal = new Vector<ResultSourceTargetPair>();                    
+                    newVal.add(new ResultSourceTargetPair(pair, tripVec));
+                    resultInstances.put(floatVal, newVal);                    
                 }
-                //System.out.println((++resultsCounter) + ".\t"+df.format(calculatedSimilarity)+"\t"+ pair.getSourceInstance().getSourceName()+"    " + pair.getSourceInstance().getInstanceUri()+"    " + pair.getTargetInstance().getSourceName()+"    " + pair.getTargetInstance().getInstanceUri());
+                
             }
         }
         
         
-        System.out.println("\n\nResults with similarity above threshold: " + userConfig.getResultsThreshold());
-        System.out.println("---------------------------------------------------------------------------");
+        
+        
+        if(targetDataCollectedCorrectly==false){
+            System.out.println("Note that while collected data from target Error Occurred");
+        }
+        
+        
+        return ApiConstants.IMAPISuccessCode;
+    }
+    
+    public void printResultInstances(Hashtable<Float, Vector<ResultSourceTargetPair>> resultInstances){
+        
         int resultsCounter = 0;
-        if (finalResults.size() == 0) {
+        if (resultInstances.size() == 0) {
             System.out.println("0 results found.");
         } else {
             
-            Vector<Integer> sortBySimilarityVec = new Vector<Integer>(finalResults.keySet());
+            Vector<Float> sortBySimilarityVec = new Vector<Float>(resultInstances.keySet());
             Collections.sort(sortBySimilarityVec);
             Collections.reverse(sortBySimilarityVec);
             
             for (int i = 0; i < sortBySimilarityVec.size(); i++) {
-                int sim = sortBySimilarityVec.get(i);
-                Vector<SourceTargetPair> stPairs = finalResults.get(sim);
+                float sim = sortBySimilarityVec.get(i);
+                Vector<ResultSourceTargetPair> stPairs = resultInstances.get(sim);
                 Collections.sort(stPairs);
                 
                 for (int k = 0; k < stPairs.size(); k++) {
-                    SourceTargetPair pair = stPairs.get(k);
-                    System.out.println((++resultsCounter) + ".\t" + ((float) (sim / 100f)) + "\t" + pair.getSourceInstance().getSourceName() + "    " + pair.getSourceInstance().getInstanceUri() + "    " + pair.getTargetInstance().getSourceName() + "    " + pair.getTargetInstance().getInstanceUri());
+                    ResultSourceTargetPair resultInfo = stPairs.get(k);
+                    SourceTargetPair pair = resultInfo.getSourceTargetPair();
+                    SequenceSimilarityResultVector tripVec = resultInfo.getSimilarityResultsVector();
                     
-                    SequenceSimilarityResultVector tripVec = pairSimilaritiesInSequences.get(pair);
+                    System.out.println((++resultsCounter) + ".\t" +  Utilities.df.format(sim) + "\t" + pair.getSourceInstance().getSourceName() + "    " + pair.getSourceInstance().getInstanceUri() + "    " + pair.getTargetInstance().getSourceName() + "    " + pair.getTargetInstance().getInstanceUri());
                     
                     //check if uri similarity is encoutered
                     
@@ -335,62 +408,68 @@ public class IMAPIClass {
                     }
                         
                     
-                    
                     System.out.println();
                     
                 }
             }
         }
-        
-        
-        return ApiConstants.IMAPISuccessCode;
+
     }
     
-    void printSourceInfo(Hashtable<SourceInstancePair, SequencesVector> sourceInfo){
+    void printSourceInfo(SourceDataHolder sourceInfo){
         
-        Vector<SourceInstancePair> fileInstances = new Vector<SourceInstancePair>(sourceInfo.keySet());
+        int counter = 0;
+        Vector<String> fileInstances = new Vector<String>(sourceInfo.keySet());
         Collections.sort(fileInstances);
         
         //System.out.println("Found " + fileInstances.size() + " instances in all \"\"SOURCE\"\" input files.");
         for (int i = 0; i < fileInstances.size(); i++) {
-            SourceInstancePair pair = fileInstances.get(i);
-            System.out.println("\r\n" + (i + 1) + ". " + pair.getInstanceUri() + "\t\tin source: " + pair.getSourceName());
-            SequencesVector allSeqData = sourceInfo.get(pair);
-            for(int k=0; k< allSeqData.size(); k++){
-                SequenceData currentSeq = allSeqData.get(k);
-                System.out.println("\tData found on sequence: "+(currentSeq.getSchemaInfo().getPositionID()+1)+" mnemonic: " + currentSeq.getSchemaInfo().getMnemonic() + " with weight: " +currentSeq.getSchemaInfo().getWeight());
-                
-                Hashtable<String,String> parameterTypes = currentSeq.getSchemaInfo().getAllQueryStepParameters();
-                
-                String[] parameterNames = currentSeq.getSchemaInfo().getSortedParameterNamesCopy();
-                for(int paramStep=0; paramStep<parameterNames.length; paramStep++ ){
-                    String paramName = parameterNames[paramStep];
-                    String paramType = parameterTypes.get(paramName);
-                    //System.out.println(paramName);
-                    //String type 
-                    //String stepName = currentSeq.getSchemaInfo().getQuerySteps().get(step).getParameterName();
-                    //String type = currentSeq.getSchemaInfo().getQuerySteps().get(step).getParameterType();
-                    
-                    Vector<DataRecord> vals = currentSeq.getValuesOfKey(paramName);
-                    
-                    for(int valIndex  =0; valIndex< vals.size(); valIndex++){
-                        DataRecord rec = vals.get(valIndex);
-                        String printStr = "\t\t"+paramName+": "+paramType+" -->\t"+rec.toString();
-                        System.out.println(printStr);
+            String filename = fileInstances.get(i);
+            Vector<String> uris = new Vector<String>(sourceInfo.get(filename).keySet());
+            Collections.sort(uris);
+            
+            for(int j=0 ; j< uris.size(); j++){
+                counter ++;
+                String uri = uris.get(j);
+                SequencesVector allSeqData = sourceInfo.get(filename).get(uri);
+                System.out.println("\r\n" + counter + ". " + uri + "\t\tin source: " + filename);
+            
+                for(int k=0; k< allSeqData.size(); k++){
+                    SequenceData currentSeq = allSeqData.get(k);
+                    System.out.println("\tData found on sequence: "+(currentSeq.getSchemaInfo().getPositionID()+1)+" mnemonic: " + currentSeq.getSchemaInfo().getMnemonic() + " with weight: " +currentSeq.getSchemaInfo().getWeight());
+
+                    Hashtable<String,String> parameterTypes = currentSeq.getSchemaInfo().getAllQueryStepParameters();
+
+                    String[] parameterNames = currentSeq.getSchemaInfo().getSortedParameterNamesCopy();
+                    for(int paramStep=0; paramStep<parameterNames.length; paramStep++ ){
+                        String paramName = parameterNames[paramStep];
+                        String paramType = parameterTypes.get(paramName);
+                        //System.out.println(paramName);
+                        //String type 
+                        //String stepName = currentSeq.getSchemaInfo().getQuerySteps().get(step).getParameterName();
+                        //String type = currentSeq.getSchemaInfo().getQuerySteps().get(step).getParameterType();
+
+                        Vector<DataRecord> vals = currentSeq.getValuesOfKey(paramName);
+
+                        for(int valIndex  =0; valIndex< vals.size(); valIndex++){
+                            DataRecord rec = vals.get(valIndex);
+                            String printStr = "\t\t"+paramName+": "+paramType+" -->\t"+rec.toString();
+                            System.out.println(printStr);
+                        }
                     }
+
                 }
-                
             }
+            
+            
             
         }
     }
     
     void printSimilaritiesData(SequenceSimilarityResultVector tripleVec){
      
-        DecimalFormat df = new DecimalFormat("#.##");
-        //System.out.println("tripleVec.size() " + tripleVec.size());
         int maxSeqCounter = this.userConfig.getNumberOfSequences();
-        Vector<UserQueryConfiguration> udfQueries = this.userConfig.getUserQueriesCopy();
+        
         for(int stepCounter=0; stepCounter< maxSeqCounter; stepCounter++){
 
             boolean seqNotFound = true;
@@ -400,7 +479,7 @@ public class IMAPIClass {
                     continue;
                 }
                 seqNotFound = false;
-                System.out.println("\t\t\tsequence: " + (currentSeqResult.getSequenceId()+1)+" weight: "+currentSeqResult.getSequenceWeight()+" similarity: " + df.format(currentSeqResult.getSimilarity())+ " mnemonic: "+currentSeqResult.getSequenceMnemonic()  );
+                System.out.println("\t\t\tsequence: " + (currentSeqResult.getSequenceId()+1)+" weight: "+currentSeqResult.getSequenceWeight()+" similarity: " + Utilities.df.format(currentSeqResult.getSimilarity().floatValue())+ " mnemonic: "+currentSeqResult.getSequenceMnemonic()  );
                 System.out.println("\t\t\t\tSource Comparison Value: "+currentSeqResult.getParameterName()+": " + currentSeqResult.getSourceVal().toString());
                 System.out.println("\t\t\t\t=====================================");
                 System.out.println("\t\t\t\tTarget Comparison Value: "+currentSeqResult.getParameterName()+": " + currentSeqResult.getTargetVal().toString());

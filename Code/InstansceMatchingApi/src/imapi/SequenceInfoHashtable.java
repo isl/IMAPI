@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +13,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
 import java.util.Collections;
@@ -27,11 +42,13 @@ import java.util.Vector;
  */
 class SequenceInfoHashtable extends Hashtable<String, Vector<DataRecord>> {
 
-    public SequenceInfoHashtable() {
-        // TODO Auto-generated constructor stub
+    SequenceInfoHashtable() {
+        
     }
 
-    public Vector<String> getKeysStartingWithPrefix(String prefix) {
+    //<editor-fold defaultstate="collapsed" desc="Abandoned not necessarily working code">
+    /*
+    Vector<String> DELETE_getKeysStartingWithPrefix(String prefix) {
 
         Vector<String> returnVec = new Vector<String>();
 
@@ -52,7 +69,7 @@ class SequenceInfoHashtable extends Hashtable<String, Vector<DataRecord>> {
         return returnVec;
     }
 
-    public void mergeWithOhterSequenceInfoHashtable(SequenceInfoHashtable other) {
+    void DELETE_mergeWithOhterSequenceInfoHashtable(SequenceInfoHashtable other) {
         Enumeration<String> otherTableIter = other.keys();
 
         while (otherTableIter.hasMoreElements()) {
@@ -79,7 +96,7 @@ class SequenceInfoHashtable extends Hashtable<String, Vector<DataRecord>> {
 
     }
     
-    protected void printContents(){
+    void DELETE_printContents(){
         Vector<String> vec = new Vector<String>(this.keySet());
         Collections.sort(vec);
         for(int i=0; i< vec.size(); i++){
@@ -92,4 +109,6 @@ class SequenceInfoHashtable extends Hashtable<String, Vector<DataRecord>> {
             }
         }
     }
+    */
+    //</editor-fold>
 }

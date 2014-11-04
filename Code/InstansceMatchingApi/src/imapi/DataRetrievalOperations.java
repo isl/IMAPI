@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +13,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
-
 
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
@@ -26,19 +40,26 @@ import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.util.FileManager;
-import static imapi.IMAPIClass.AcceptUriEquality;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -47,69 +68,147 @@ import java.util.Vector;
 class DataRetrievalOperations {
 
     IMAPIClass imClass = null;
-    //private StringSimilarity strSimilarity;//  = new StringSimilarity();
 
-    private BaseComparisonClass comp=null;
+    private BaseComparisonClass comp = null;
+    private enum DataMode {
+
+        SOURCE_DATA, TARGET_DATA
+    };
+
+
     DataRetrievalOperations(IMAPIClass whichImClass) {
         this.imClass = whichImClass;
         this.comp = new BaseComparisonClass(this.imClass);
-        
     }
 
-    
-    Hashtable<String, Model> retrieveAllDeclaredNamespacesModels(){
-        System.out.println("\n=======================================\n"); 
-        System.out.println("Retrieving Schema info from all namespaces used.");
+    boolean checkNameSpaceUriInternetAvailability(String nsUri) {
+        boolean returnVal = true;
+        try {
+
+            String USER_AGENT = "Mozilla/5.0";
+
+            HttpURLConnection con = (HttpURLConnection) (new URL(nsUri)).openConnection();
+
+            // optional default is GET
+            con.setRequestMethod("GET");
+            con.setRequestProperty("HTTP", "1.1");
+            con.setRequestProperty("User-Agent", USER_AGENT);
+
+            int responseCode = con.getResponseCode();
+
+            if (responseCode != 200) {
+                returnVal = false;
+            }
+
+        } catch (MalformedURLException ex) {
+            Utilities.handleException(ex);
+            returnVal = false;
+        } catch (IOException ex) {
+            Utilities.handleException(ex);
+            returnVal = false;
+        }
+
+        if (returnVal == false) {
+            System.out.println("Could not find namespace: " + nsUri);
+        }
+        return returnVal;
+    }
+
+    Hashtable<String, Model> retrieveAllDeclaredNamespacesModels() {
+
+        System.out.println("\n=======================================\n");
         Hashtable<String, Model> allDeclaredModels = new Hashtable<String, Model>();
-        
+        Vector<String> includeNamespaces = this.imClass.qWeightsConfig.getIncludeNamespaces();
+
         Vector<CidocCrmCompatibleFile> inputFiles = this.imClass.userConfig.getSourceInputFiles();
-        
-        for(int i=0; i< inputFiles.size(); i++){
+        Vector<String> finallySkippedNamespaces = new Vector<String>();
+
+        Vector<String> sourceInputFilesNamespaces = new Vector<String>();
+        sourceInputFilesNamespaces.add("http://erlangen-crm.org/current/");
+        sourceInputFilesNamespaces.add("http://purl.org/NET/crm-owl#");
+        sourceInputFilesNamespaces.add("http://www.w3.org/2004/02/skos/core#");
+        sourceInputFilesNamespaces.add("http://www.w3.org/2000/01/rdf-schema#");
+        sourceInputFilesNamespaces.add("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+
+        for (int i = 0; i < inputFiles.size(); i++) {
+
+            if (IMAPIClass.DEBUG) {
+                System.out.println("DEBUG: Retrieving namespaces from file: " + inputFiles.get(i).getFilePath());
+            }
             Model CidocCRMmodel = ModelFactory.createDefaultModel();
-            InputStream cidocInputStream = FileManager.get().open(inputFiles.get(i).getFilePath());        
+            InputStream cidocInputStream = FileManager.get().open(inputFiles.get(i).getFilePath());
             if (cidocInputStream == null) {
                 continue;
             }
 
-            CidocCRMmodel.read(cidocInputStream, null);
-            
+            CidocCRMmodel = CidocCRMmodel.read(cidocInputStream, null);
+
             Map<String, String> namespaces = CidocCRMmodel.getNsPrefixMap();
             Vector<String> nKeys = new Vector<String>(namespaces.keySet());
             for (int m = 0; m < nKeys.size(); m++) {
+
                 String keyStr = nKeys.get(m);
                 String fileNs = namespaces.get(keyStr);
 
-                if(allDeclaredModels.containsKey(fileNs)){
+                if (includeNamespaces.contains(fileNs) == false) {
+                    if (finallySkippedNamespaces.contains(fileNs) == false) {
+                        finallySkippedNamespaces.add(fileNs);
+                    }
                     continue;
                 }
+
+                if (allDeclaredModels.containsKey(fileNs)) {
+                    continue;
+                }
+
+                if (checkNameSpaceUriInternetAvailability(fileNs) == false) {
+                    continue;
+                }
+
                 Model loopModel = ModelFactory.createDefaultModel();
                 boolean exCaught = false;
                 try {
-                    System.out.println("Retrieving model of namespace "+fileNs);
+                    System.out.println("Retrieving model of namespace " + fileNs);
                     loopModel = loopModel.read(fileNs);
-                    
+
                 } catch (Exception ex) {
                     System.out.println("Exception caught while retrieving schema info for namespace: " + fileNs);
-                    System.out.println(ex.getMessage());
+                    Utilities.handleException(ex);
                     exCaught = true;
                 }
                 if (exCaught) {
                     continue;
                 }
-                
+
                 allDeclaredModels.put(fileNs, loopModel);
-                
+
+                /*
+                 if i close them then an exception is caught
+                 loopModel.removeAll();
+                 loopModel.close();
+                 loopModel = null;
+                 */
             }
+
+            CidocCRMmodel = CidocCRMmodel.removeAll();
+            CidocCRMmodel.close();
+            CidocCRMmodel = null;
+            try {
+                cidocInputStream.close();
+            } catch (IOException ex) {
+                Utilities.handleException(ex);
+            }
+            cidocInputStream = null;
         }
-        
+
         ApiConstants.TargetSourceChoice targetChoice = this.imClass.userConfig.getComparisonMode();
-        switch(targetChoice){
-            case FILE_COMPARISON:{
+        switch (targetChoice) {
+            case FILE_COMPARISON: {
                 Vector<CidocCrmCompatibleFile> targetFiles = this.imClass.userConfig.getTargetInputFiles();
-        
-                for(int i=0; i< targetFiles.size(); i++){
+
+                for (int i = 0; i < targetFiles.size(); i++) {
                     Model CidocCRMmodel = ModelFactory.createDefaultModel();
-                    InputStream cidocInputStream = FileManager.get().open(targetFiles.get(i).getFilePath());        
+                    InputStream cidocInputStream = FileManager.get().open(targetFiles.get(i).getFilePath());
                     if (cidocInputStream == null) {
                         continue;
                     }
@@ -122,853 +221,1480 @@ class DataRetrievalOperations {
                         String keyStr = nKeys.get(m);
                         String fileNs = namespaces.get(keyStr);
 
-                        if(allDeclaredModels.containsKey(fileNs)){
+                        if (includeNamespaces.contains(fileNs) == false) {
+                            if (finallySkippedNamespaces.contains(fileNs) == false) {
+                                finallySkippedNamespaces.add(fileNs);
+                            }
+                            continue;
+                        }
+
+                        if (allDeclaredModels.containsKey(fileNs)) {
+                            continue;
+                        }
+
+                        if (checkNameSpaceUriInternetAvailability(fileNs) == false) {
                             continue;
                         }
                         Model loopModel = ModelFactory.createDefaultModel();
                         boolean exCaught = false;
                         try {
-                            System.out.println("Retrieving model of namespace "+fileNs);
+                            System.out.println("Retrieving model of namespace " + fileNs);
                             loopModel = loopModel.read(fileNs);
                         } catch (Exception ex) {
                             System.out.println("Exception caught while retrieving schema info for namespace: " + fileNs);
-                            System.out.println(ex.getMessage());
+                            Utilities.handleException(ex);
                             exCaught = true;
                         }
                         if (exCaught) {
                             continue;
                         }
 
-                        
                         allDeclaredModels.put(fileNs, loopModel);
-                        
+
                     }
+
+                    CidocCRMmodel.removeAll();
+                    CidocCRMmodel.close();
+                    CidocCRMmodel = null;
+                    try {
+                        cidocInputStream.close();
+                    } catch (IOException ex) {
+                        Utilities.handleException(ex);
+                    }
+                    cidocInputStream = null;
                 }
                 break;
             }
             /*
-            case BRITISH_MUSEUM_COLLECTION:{
+             case BRITISH_MUSEUM_COLLECTION:{
                 
-            }
-            */
-            default:{
-                
-                Vector<OnlineDatabase> allSupportedDbs = this.imClass.conf.getSupportedDatabases();
-                for(int i=0; i<allSupportedDbs.size(); i++){
-                    OnlineDatabase db = allSupportedDbs.get(i);
-                    if(db.getDBChoice()!=targetChoice){
+             }
+             */
+            default: {
+                OnlineDatabase db = this.imClass.conf.getOnlineDb(targetChoice);
+                if (db == null) {
+                    break;
+                }
+                Hashtable<String, String> dbNamepaces = db.getDbNamesapcesCopy();
+
+                Enumeration<String> nsEnum = dbNamepaces.keys();
+                while (nsEnum.hasMoreElements()) {
+                    String keyStr = nsEnum.nextElement();
+                    String namespace = dbNamepaces.get(keyStr);
+
+                    if (includeNamespaces.contains(namespace) == false) {
+                        if (finallySkippedNamespaces.contains(namespace) == false) {
+                            finallySkippedNamespaces.add(namespace);
+                        }
                         continue;
                     }
-                    Hashtable<String,String> dbNamepaces = db.getDbNamesapcesCopy();
-                    
-                    Enumeration<String> nsEnum = dbNamepaces.keys();
-                    while(nsEnum.hasMoreElements()){
-                        String keyStr = nsEnum.nextElement();
-                        String namespace = dbNamepaces.get(keyStr);
-                        if(allDeclaredModels.containsKey(namespace)){
-                            continue;
-                        }
-                        
-                        Model loopModel = ModelFactory.createDefaultModel();
-                        boolean exCaught = false;
-                        try {
-                            System.out.println("Retrieving model of namespace "+namespace);
-                            loopModel = loopModel.read(namespace);
-                        } catch (Exception ex) {
-                            System.out.println("Exception caught while retrieving schema info for namespace: " + namespace);
-                            System.out.println(ex.getMessage());
-                            exCaught = true;
-                        }
-                        if (exCaught) {
-                            continue;
-                        }
 
-                        
-                        allDeclaredModels.put(namespace, loopModel);
-                        
+                    if (allDeclaredModels.containsKey(namespace)) {
+                        continue;
                     }
-                    
-                    
+
+                    if (checkNameSpaceUriInternetAvailability(namespace) == false) {
+
+                        continue;
+                    }
+
+                    Model loopModel = ModelFactory.createDefaultModel();
+                    boolean exCaught = false;
+                    try {
+                        System.out.println("Retrieving model of namespace " + namespace);
+                        loopModel = loopModel.read(namespace);
+                    } catch (Exception ex) {
+                        System.out.println("Exception caught while retrieving schema info for namespace: " + namespace);
+                        System.out.println(ex.getMessage());
+                        exCaught = true;
+                    }
+                    if (exCaught) {
+                        continue;
+                    }
+
+                    allDeclaredModels.put(namespace, loopModel);
+
                 }
-                
+
                 break;
             }
         }
-        
-        
+
         //Now add the extensions to valid cidoc namespaces
         Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
-        
+
         Enumeration<String> allNs = allDeclaredModels.keys();
-        while(allNs.hasMoreElements()){
+        while (allNs.hasMoreElements()) {
             String next = allNs.nextElement();
             String initialNamespace = next;
-            if(validCrmNs.contains(next)==false){
+            if (validCrmNs.contains(next) == false) {
                 continue;
             }
-            
+
             Model crmModel = allDeclaredModels.get(next);
-            if(targetChoice==ApiConstants.TargetSourceChoice.CLAROS && next.equals("http://purl.org/NET/crm-owl#")){
+            //CLAROS fix Claros database needs http://purl.org/NET/crm-owl# for 
+            //it's queries but actually uses   http://erlangen-crm.org/091217/
+            if (targetChoice == ApiConstants.TargetSourceChoice.CLAROS && next.equals("http://purl.org/NET/crm-owl#")) {
                 next = "http://erlangen-crm.org/091217/";
             }
             String rdfStatements = this.imClass.qWeightsConfig.getCrmExtentionsString(next);
             Model loopModel = ModelFactory.createDefaultModel();
-            
+
             loopModel.read(new java.io.StringReader(rdfStatements), next);
-            
+
             crmModel = crmModel.union(loopModel);
-            
+
             allDeclaredModels.put(initialNamespace, crmModel);
         }
-        //System.out.println("\n=======================================\n"); 
-        //System.out.println("Finished Retrieving Schema info from namespaces declared in all input files.");
-        
+        Collections.sort(finallySkippedNamespaces);
+        System.out.println();
+        for (int i = 0; i < finallySkippedNamespaces.size(); i++) {
+            System.out.println((i + 1) + ".\t Skipped namespace: " + finallySkippedNamespaces.get(i));
+        }
+        System.out.println();
+
         return allDeclaredModels;
     }
-    
-    
 
-    
-    
-    int retrieveDataFromFileAndCollectSimilarities(CidocCrmCompatibleFile cidocLoadFile, 
-            Hashtable<String,Model> allRetrievedModels,
-            Hashtable<SourceInstancePair, SequencesVector> inputFilesInfo, 
-            Hashtable<SourceInstancePair, SequencesVector> targetFilesInfo, 
-            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences){
-        
-        String loadFile = cidocLoadFile.getFilePath();
-        System.out.println("\n=======================================\n"); 
-        System.out.println("Processing target file: " + cidocLoadFile.getFilePath());
-        QueryBuilder qBuilder = new QueryBuilder(this.imClass);
-        
+    //Retrieving schema info and preparing queries
+    private Model getSchemaInfoFromFile(CidocCrmCompatibleFile cidocLoadFile,
+            Hashtable<String, Model> allRetrievedModels,
+            StringObject queryPrefixes,
+            StringObject getAllInstances,
+            StringObject countAllInstances,
+            Vector<UserQueryConfiguration> qSequences) {
 
-        Model CidocCRMmodel = ModelFactory.createDefaultModel();
-        InputStream cidocInputStream = FileManager.get().open(loadFile);        
-        if (cidocInputStream == null) {
-            this.imClass.setErrorMessage(ApiConstants.IMAPIFailCode, "Error while trying to load file: " + loadFile);
-            return ApiConstants.IMAPIFailCode;
-        }
-
-        CidocCRMmodel.read(cidocInputStream, null);
-
-        //System.out.println("=======================================");            
-        
-        //System.out.println("Retrieving Schema Info from file: " + loadFile);
-
-        String queryPrefixes = "";
-        Hashtable<String, String> allNamespacesThatWillBeUsed = new Hashtable<String, String>();
-        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
-
-        Hashtable<String,String> validCrmNsUsed = new Hashtable<String,String>();
-        
         Model finalFileModel = ModelFactory.createDefaultModel();
+        QueryBuilder qBuilder = new QueryBuilder(this.imClass);
+        queryPrefixes.setString("");
+
+        Hashtable<String, String> allNamespacesThatWillBeUsed = new Hashtable<String, String>();
+        Vector<String> includeNamespaces = this.imClass.qWeightsConfig.getIncludeNamespaces();
+        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
+        Hashtable<String, String> validCrmNsUsed = new Hashtable<String, String>();
+
+        String loadFilePath = cidocLoadFile.getFilePath();
+        Model CidocCRMmodel = ModelFactory.createDefaultModel();
+        InputStream cidocInputStream = FileManager.get().open(loadFilePath);
+        if (cidocInputStream == null) {
+            this.imClass.setErrorMessage(ApiConstants.IMAPIFailCode, "Error while trying to load file: " + loadFilePath);
+            return null;
+        }
+        CidocCRMmodel = CidocCRMmodel.read(cidocInputStream, null);
+
         finalFileModel = finalFileModel.union(CidocCRMmodel);
 
-        
-        
+        //<editor-fold defaultstate="collapsed" desc="Read models of included namespaces and collect prefixes">
         Map<String, String> namespaces = CidocCRMmodel.getNsPrefixMap();
         Vector<String> nKeys = new Vector<String>(namespaces.keySet());
         for (int m = 0; m < nKeys.size(); m++) {
             String keyStr = nKeys.get(m);
             String fileNs = namespaces.get(keyStr);
 
-            queryPrefixes +="PREFIX "+keyStr+": <" +fileNs+">\n";
+            queryPrefixes.setString(queryPrefixes.getString() + "PREFIX " + keyStr + ": <" + fileNs + ">\n");
             allNamespacesThatWillBeUsed.put(keyStr, fileNs);
-            if(validCrmNs.contains(fileNs)){
+
+            if (validCrmNs.contains(fileNs)) {
+
                 validCrmNsUsed.put(keyStr, fileNs);
+
             }
-            
 
-            Model loopModel = allRetrievedModels.get(fileNs);
-            
-            //queryNamespacesDeclaration += "PREFIX " + keyStr + ": <" + fileNs + ">\n";
-            finalFileModel = finalFileModel.union(loopModel);
+            if (includeNamespaces.contains(fileNs)) {
+                Model loopModel = allRetrievedModels.get(fileNs);
+                if (loopModel != null) {
+                    finalFileModel = finalFileModel.union(loopModel);
+                }
+            }
         }
-        
+        CidocCRMmodel.removeAll();
+        CidocCRMmodel.close();
+        CidocCRMmodel = null;
 
-        if(validCrmNsUsed.size()>1){
-            System.out.println("Warning: In file " + loadFile + " more that one Cidoc Namespaces were found:\n" + validCrmNsUsed.toString());
+        try {
+            cidocInputStream.close();
+        } catch (Exception ex) {
+            Utilities.handleException(ex);
         }
-        queryPrefixes+="\n";
+        cidocInputStream = null;
 
+        if (validCrmNsUsed.size() > 1) {
+            System.out.println("Warning: In file " + loadFilePath + " more that one Cidoc Namespaces were found:\n" + validCrmNsUsed.toString());
+        }
+        queryPrefixes.setString(queryPrefixes.getString() + "\n");
 
-        StringObject getAllInstances = new StringObject("");
-        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();
-        
-        
-        
-
-        //prepare the queries --> retrieve from model the class and predicate names
+        //</editor-fold>
+        //prepare a model that will be used in order to retrieve the cidoc classes and predicates 
+        //it will only contain cidoc compatible namespaces
         Model prepareQueriesModel = ModelFactory.createDefaultModel();
         Enumeration<String> validCrmEnum = validCrmNsUsed.keys();
-        while(validCrmEnum.hasMoreElements()){
+        while (validCrmEnum.hasMoreElements()) {
             Model loopModel = allRetrievedModels.get(validCrmNsUsed.get(validCrmEnum.nextElement()));
             prepareQueriesModel = prepareQueriesModel.union(loopModel);
         }
-        
-        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, cidocLoadFile.getPredicateDirectionUsage(), getAllInstances, qSequences);
 
-        if(ret!=ApiConstants.IMAPISuccessCode){
-            return ret;
+        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, ApiConstants.TargetSourceChoice.FILE_COMPARISON, cidocLoadFile.getPredicateDirectionUsage(), getAllInstances, countAllInstances, qSequences);
+
+        if (ret != ApiConstants.IMAPISuccessCode) {
+            return null;
         }
-       
+        prepareQueriesModel = prepareQueriesModel.removeAll();
+        prepareQueriesModel.close();
+        prepareQueriesModel = null;
 
-        //System.out.println("=======================================");            
+        return finalFileModel;
+    }
+
+    private int getInstancesCardinalityInFile(StringObject prefixes, StringObject baseQuery, OntModel fileModel) {
+
+        int returnResult = -1;
+        Query instancesQuery = QueryFactory.create(prefixes.getString() + baseQuery.getString());
+        QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
+        com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
+
+        while (instancesResults.hasNext()) {
+            QuerySolution qs = instancesResults.next();
+
+            Iterator<String> iter = qs.varNames();
+            while (iter.hasNext()) {
+
+                String str = iter.next();
+                String val = qs.get(str).toString();
+                if (val != null && val.length() > 0) {
+                    returnResult = Integer.parseInt(val);
+                }
+
+            }
+        }
+
+        instancesQueryExecution.close();
+        if (IMAPIClass.DEBUG) {
+            System.out.println();
+            System.out.println("File instances number: " + returnResult);
+            System.out.println();
+        }
+        return returnResult;
+    }
+
+    private int retrieveDataFromFile(CidocCrmCompatibleFile cidocLoadFile,
+            Hashtable<String, Model> allRetrievedModels,
+            SourceDataHolder inputFilesInfo,
+            DataMode dataMode,
+            Vector<Boolean> canQuickFilteringMethodBeFollowedForeachSequence,
+            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences) throws FileNotFoundException {
+
+        String loadFile = cidocLoadFile.getFilePath();
+        System.out.println("\n=======================================\n");
+        System.out.println("Processing source file: " + cidocLoadFile.getFilePath());
+
+        int instanceUrisFilterStepCount = this.imClass.qWeightsConfig.getQueryFilteringInstancesCount();
+        int valueUrisFilterStepCount = this.imClass.qWeightsConfig.getQueryFilteringValuesCount();
         
-        //System.out.println("Starting queries on file: " + loadFile);
-        
+        StringObject queryPrefixes = new StringObject("");
+        StringObject getAllInstances = new StringObject("");
+        StringObject countAllInstances = new StringObject("");
+        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();
+        boolean allSequencesFast = false;
+        if (dataMode == DataMode.TARGET_DATA) {
+            if (canQuickFilteringMethodBeFollowedForeachSequence != null && canQuickFilteringMethodBeFollowedForeachSequence.contains(false) == false) {
+                allSequencesFast = true;
+            }
+        }
+
+        Model finalFileModel = this.getSchemaInfoFromFile(cidocLoadFile, allRetrievedModels, queryPrefixes, getAllInstances, countAllInstances, qSequences);
+        if (finalFileModel == null) {
+            return ApiConstants.IMAPIFailCode;
+        }
         OntModel fileModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MINI_RULE_INF, finalFileModel);
-        
-        
+
         InputStream fileInputStream = FileManager.get().open(loadFile);
         if (fileInputStream == null) {
             this.imClass.setErrorMessage(ApiConstants.IMAPIFailCode, "Error while trying to load file: " + loadFile);
             return ApiConstants.IMAPIFailCode;
         }
+        fileModel = (OntModel) fileModel.read(fileInputStream, null);
 
-        fileModel.read(fileInputStream, null);
         
-        System.out.println("Retrieving Relevant Instances");
-        int instancesCounter =0;
-        if(getAllInstances.getString().length()>0){
-            
-            
-                Vector<String> allValuesFound  = DataRetrievalOperations.collectAllURIValues(inputFilesInfo);
-                //int currentStepPosition = qStep.getStepPositionInSequence();
-                
-                int currentCounter =0;
-                int maxFilterCounter = allValuesFound.size();
+        
+      
+        
+        
+        //First level loop --> Query in steps of some thousand instances this.imClass.qWeightsConfig.getQueryLimitSize() = 4000
+        //Second level loop each sequence start from ApiConstants.instanceUrisFilterStepCount = 500 starting instances
+        //Perhaps a third level loop is required in case this subset (ApiConstants.instanceUrisFilterStepCount = 500) returns too many results
+        //first level loop - loop over instances
+        int totalProcessedInstances = 0;
+        int totalInstancesIntheFile = getInstancesCardinalityInFile(queryPrefixes, countAllInstances, fileModel);
 
-
-                while(currentCounter<maxFilterCounter){
-                    int resultCounter = 0;
-                    Vector<String> currentSubset = QueryBuilder.collectSequenctiallyAsubsetOfValues(currentCounter,allValuesFound);
-                    currentCounter+=ApiConstants.UriFilterStepCount; 
-                    
-                    String currentQuery = getAllInstances.getString();
-                    
-                    
-                    
-                    Query tempQuery = QueryFactory.create(queryPrefixes + currentQuery);
-                    List<Var> vars = tempQuery.getProjectVars();
-                    if(vars.size()>0){
-                        String paramName = vars.get(0).getName().replace("?", "");
-                        currentQuery = QueryBuilder.replaceFilteringPlaceHoldersForInstances(currentQuery, paramName, currentSubset);
-                        
-                        if(IMAPIClass.DEBUG){
-                            System.out.println(queryPrefixes+currentQuery);
-                        }
-                    }
-                    
-                    Query instancesQuery = QueryFactory.create(queryPrefixes + currentQuery);
-                    QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
-                    com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
-
-                    while (instancesResults.hasNext()) {
-                        resultCounter++;
-                        instancesCounter++;
-                        QuerySolution qs = instancesResults.next();
-                        Iterator<String> iter = qs.varNames();
-                        while (iter.hasNext()) {
-                            String str = iter.next();
-                            String val = qs.get(str).toString();
-
-                            SourceInstancePair newVal = new SourceInstancePair(loadFile, val);
-
-                            Enumeration<SourceInstancePair> sourceEnum = inputFilesInfo.keys();
-                            while(sourceEnum.hasMoreElements()){
-                                SourceInstancePair pair = sourceEnum.nextElement();
-                                if(pair.getInstanceUri().equals(val)){
-                                    SourceTargetPair newSTPair = new SourceTargetPair(pair, newVal);
-                                    SequenceSimilarityResultVector newSeqVec = new SequenceSimilarityResultVector();
-                                            
-                                    if(pairSimilaritiesInSequences.containsKey(newSTPair)==false){
-                                        pairSimilaritiesInSequences.put(newSTPair, newSeqVec);
-                                    }
-                                    if(ApiConstants.KeepandPresentAllTargetDataFound){
-                                        if (targetFilesInfo.containsKey(newVal) == false) {
-                                            
-                                            targetFilesInfo.put(newVal, new SequencesVector());
-                                        }
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-
-                    instancesQueryExecution.close();
-                    if(IMAPIClass.DEBUG){
-                        System.out.println("Adding "+resultCounter+" results.");
-                    }
-                }
-                    
-            
+        if(totalInstancesIntheFile==0){
+            return ApiConstants.IMAPISuccessCode;
         }
         
-        System.out.println("\nFound a total of "+instancesCounter+" relevant instances.\n\n");
-        
-        //Double threshold = this.imClass.userConfig.getResultsThreshold();
-        for(int i=0; i< qSequences.size(); i++){
-            
-            UserQueryConfiguration currentSequence = qSequences.get(i);
-            int currentSequencePosition = currentSequence.getPositionID();
-            System.out.println("Retrieving Relevant Records of sequence "+(currentSequence.getPositionID()+1)+" with mnemonic " + currentSequence.getMnemonic());
-            instancesCounter =0;
-        
-            
-            
-            Hashtable<String,String> parameters = currentSequence.getAllQueryStepParameters();
-            
-            //System.out.println("\n\nQuering sequence "+currentSequence.getSequencePosition() +" --> mnemonic: "+currentSequence.getMnemonic());
-            //SequenceData currentData = new SequenceData(currentSequence);
-            
-            String[] parameterNames = currentSequence.getSortedParameterNamesCopy();
-            String[] parameterTypes = currentSequence.getSortedParameterTypesCopy();
-            String[] stepQueries = currentSequence.getSortedQueriesCopy();
-            
-            for(int k=0; k<parameterNames.length; k++){
-                
-                
-                String currentQuery = stepQueries[k];
-                String currentStepParameterName = parameterNames[k];
-                
-                System.out.println("Adding "+currentStepParameterName+" records.");
-                
-                
-                Vector<String> allValuesFound  = DataRetrievalOperations.collectAllValuesOfSpecificParameter(currentSequencePosition, currentStepParameterName, inputFilesInfo);
-                //int currentStepPosition = qStep.getStepPositionInSequence();
-                
-                int currentCounter =0;
-                int maxFilterCounter = allValuesFound.size();
-
-
-                if(maxFilterCounter==0){
+        //first level   -- integer - sequence position
+        //second level  -- String parameterName 
+        //third level   -- Vector of uris on that parameter name
+        Hashtable<Integer,Hashtable<String,Vector<String>>> indexedDataFromInputFiles = new Hashtable<Integer,Hashtable<String,Vector<String>>>();   
+        //<editor-fold defaultstate="collapsed" desc="Fill indexedDataFromInputFiles with existing values of the file">
+        if(dataMode == DataMode.TARGET_DATA && canQuickFilteringMethodBeFollowedForeachSequence.contains(true)){
+            for (int i = 0; i < this.imClass.userConfig.getUserQueriesCopy().size(); i++) {
+                boolean canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(i);
+                if(canFastMethodBeApplied == false){
                     continue;
                 }
-
-                int resultCounter = 0;
-                while(currentCounter<maxFilterCounter){
-                    
-                    Vector<String> currentSubset = QueryBuilder.collectSequenctiallyAsubsetOfValues(currentCounter,allValuesFound);
-                    currentCounter+=ApiConstants.UriFilterStepCount; 
-                    
-                    currentQuery = QueryBuilder.replaceFilteringPlaceHolders(currentQuery, currentStepParameterName, currentSubset);
-
-                    if(IMAPIClass.DEBUG){
-                        System.out.println("currentQuery:\n"+queryPrefixes+currentQuery);
-                    }
-                    Query predicateQuery = QueryFactory.create(queryPrefixes + currentQuery);
-                    QueryExecution instancesQueryExecution = QueryExecutionFactory.create(predicateQuery, fileModel);
-                    com.hp.hpl.jena.query.ResultSet predicateResults = instancesQueryExecution.execSelect();
-
-                    while (predicateResults.hasNext()) {
-                        instancesCounter++;
-                        resultCounter++;
-                        QuerySolution qs = predicateResults.next();
-                        Iterator<String> iter = qs.varNames();
-                        String resultLine = "";
-                        boolean gotInstanceUri = false;
-                        String instanceUri ="";
-                        SourceInstancePair searchVal = null;
-                        while (iter.hasNext()) {
-                            String KeyStr = iter.next();
-                            if(!gotInstanceUri){
-                                instanceUri = qs.get(KeyStr).toString();
-                                searchVal  = new SourceInstancePair(loadFile, instanceUri);
-                                gotInstanceUri = true;
-                                continue;
-                            }
-
-                            String val =""; 
-                            String lang="";
-                            if(qs.get(KeyStr).isLiteral()){
-                                val=qs.get(KeyStr).asLiteral().getString();
-                                lang=qs.get(KeyStr).asLiteral().getLanguage();
-                            }
-                            else{
-                                val=qs.get(KeyStr).toString();
-                            }
-
-                            resultLine +="\t"+instanceUri+"\t"+KeyStr+": " +val + " " + lang;
-                            if(IMAPIClass.DEBUG){
-                                System.out.println(resultLine);
-                            }
-
-
-                            DataRecord newRecord = new DataRecord(val, lang);
-                            //here we should see if we have to store the value found --> make the comparison
-
-                            
-                            Enumeration<SourceInstancePair> sourceEnum = inputFilesInfo.keys();
-                            while(sourceEnum.hasMoreElements()){
-                                SourceInstancePair pair = sourceEnum.nextElement();
-                                SequencesVector pairdata = inputFilesInfo.get(pair);
-
-                                SequenceData seqData = pairdata.getSequenceDataAtPosition(currentSequencePosition);
-                                if(seqData==null){
-                                    continue;
-                                }
-
-                                Vector<DataRecord> sourceVals = seqData.getValuesOfKey(KeyStr);
-                                if(sourceVals ==null || sourceVals.size()==0){
-                                    continue;
-                                }
-
-                                String paramType = parameters.get(KeyStr);
-                                DataRecord srcCompareRecord = new DataRecord("", "");
-
-                                Double tempComparisonResult = this.comp.compareValueAgainstVector(paramType,newRecord, sourceVals, srcCompareRecord);
-                                if(tempComparisonResult>0d){
-    
-                                    if(ApiConstants.KeepandPresentAllTargetDataFound){
-                                        if (targetFilesInfo.containsKey(searchVal) == false) {
-                                            SequencesVector newSeq = new SequencesVector();
-                                            newSeq.addValueToSequence(currentSequence, KeyStr, val, lang);
-                                            targetFilesInfo.put(searchVal, newSeq);
-                                        }
-                                        else{
-                                            targetFilesInfo.get(searchVal).addValueToSequence(currentSequence, KeyStr, val, lang);
-                                        }                                        
-                                    }
-
-
-                                    SourceTargetPair newSTPair = new SourceTargetPair(pair, searchVal);
-                                    //int currentSequencePosition = currentSequence.getSequencePosition();
-                                    SequenceSimilarityResult newSimResult = new SequenceSimilarityResult(currentSequencePosition,seqData.getSchemaInfo().getMnemonic(), seqData.getSchemaInfo().getWeight());
-                                    newSimResult.setNewSimilarityResult(KeyStr, paramType, srcCompareRecord, newRecord, tempComparisonResult);
-
-                                    //SimilarityTriplet newSimTriplet = new SimilarityTriplet(currentSequencePosition, currentStepPosition, tempComparisonResult);
-                                    if(pairSimilaritiesInSequences.containsKey(newSTPair)){
-
-                                        pairSimilaritiesInSequences.get(newSTPair).addSequenceSimilarityResult(newSimResult);
-
-                                    }
-                                    else{
-                                        SequenceSimilarityResultVector newSeqSimilarity = new SequenceSimilarityResultVector();
-                                        newSeqSimilarity.add(newSimResult);
-                                        pairSimilaritiesInSequences.put(newSTPair, newSeqSimilarity);
-                                    }                                    
-                                }                                
-                            }
-                        }
-                        
-                    }
-                    instancesQueryExecution.close();                                
-                    
-                }
-                System.out.println("Adding "+resultCounter+" results.");
                 
-            }                   
-            
-            System.out.println("\nFound a total of "+instancesCounter+" relevant Records in sequence with mnemonic "+currentSequence.getMnemonic()+".\n\n");
-        }
-
-        return ApiConstants.IMAPISuccessCode;
-    }
-    
-    int retrieveDataFromFile(CidocCrmCompatibleFile cidocLoadFile, 
-            Hashtable<String,Model> allRetrievedModels,
-            Hashtable<SourceInstancePair, SequencesVector> inputFilesInfo){
-        
-        
-        String loadFile = cidocLoadFile.getFilePath();
-        System.out.println("\n=======================================\n"); 
-        System.out.println("Processing source file: " + cidocLoadFile.getFilePath());
-        QueryBuilder qBuilder = new QueryBuilder(this.imClass);
-        
-
-        Model CidocCRMmodel = ModelFactory.createDefaultModel();
-        InputStream cidocInputStream = FileManager.get().open(loadFile);        
-        if (cidocInputStream == null) {
-            this.imClass.setErrorMessage(ApiConstants.IMAPIFailCode, "Error while trying to load file: " + loadFile);
-            return ApiConstants.IMAPIFailCode;
-        }
-
-        CidocCRMmodel.read(cidocInputStream, null);
-
-        //System.out.println("=======================================");            
-        
-        //System.out.println("Retrieving Schema Info from file: " + loadFile);
-
-        String queryPrefixes = "";
-        Hashtable<String, String> allNamespacesThatWillBeUsed = new Hashtable<String, String>();
-        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
-
-        Hashtable<String,String> validCrmNsUsed = new Hashtable<String,String>();
-        
-        Model finalFileModel = ModelFactory.createDefaultModel();
-        finalFileModel = finalFileModel.union(CidocCRMmodel);
-
-        Map<String, String> namespaces = CidocCRMmodel.getNsPrefixMap();
-        Vector<String> nKeys = new Vector<String>(namespaces.keySet());
-        for (int m = 0; m < nKeys.size(); m++) {
-            String keyStr = nKeys.get(m);
-            String fileNs = namespaces.get(keyStr);
-
-            queryPrefixes +="PREFIX "+keyStr+": <" +fileNs+">\n";
-            allNamespacesThatWillBeUsed.put(keyStr, fileNs);
-            
-            if(validCrmNs.contains(fileNs)){
-                validCrmNsUsed.put(keyStr, fileNs);
                 
-            }
-            
-            Model loopModel = allRetrievedModels.get(fileNs);
-            //queryNamespacesDeclaration += "PREFIX " + keyStr + ": <" + fileNs + ">\n";
-            if(loopModel!=null){
-            finalFileModel = finalFileModel.union(loopModel);
-            }
-        }
-        
-        
-        if(validCrmNsUsed.size()>1){
-            System.out.println("Warning: In file " + loadFile + " more that one Cidoc Namespaces were found:\n" + validCrmNsUsed.toString());
-        }
-        queryPrefixes+="\n";
-
-
-        StringObject getAllInstances = new StringObject("");
-        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();
-        //prepare the queries --> retrieve from model the class and predicate names
-        Model prepareQueriesModel = ModelFactory.createDefaultModel();
-        Enumeration<String> validCrmEnum = validCrmNsUsed.keys();
-        while(validCrmEnum.hasMoreElements()){
-            Model loopModel = allRetrievedModels.get(validCrmNsUsed.get(validCrmEnum.nextElement()));
-            prepareQueriesModel = prepareQueriesModel.union(loopModel);
-        }
-        
-        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, cidocLoadFile.getPredicateDirectionUsage(), getAllInstances, qSequences);
-
-        if(ret!=ApiConstants.IMAPISuccessCode){
-            return ret;
-        }
-       
-
-        //System.out.println("=======================================");            
-        
-        //System.out.println("Starting queries on file: " + loadFile);
-        
-        OntModel fileModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM_MINI_RULE_INF, finalFileModel);
-        
-        
-        
-        InputStream fileInputStream = FileManager.get().open(loadFile);
-        if (fileInputStream == null) {
-            this.imClass.setErrorMessage(ApiConstants.IMAPIFailCode, "Error while trying to load file: " + loadFile);
-            return ApiConstants.IMAPIFailCode;
-        }
-
-        
-        fileModel.read(fileInputStream, null);
-
-        /*
-        for(int p=0; p< validCrmNsUsed.size(); p++){
-            String targetNs = validCrmNsUsed.get(p);
-            
-            String rdfStatements = this.imClass.conf.getCrmExtentionsString(targetNs);
-            //Model loopModel = ModelFactory.createDefaultModel();
-            
-            //loopModel.read(new java.io.StringReader(rdfStatements), targetNs);
-            fileModel.read(new java.io.StringReader(rdfStatements), targetNs);
-        }
-        */
-        
-        
-        
-        if(getAllInstances.getString().length()>0){
-            Query instancesQuery = QueryFactory.create(queryPrefixes + getAllInstances.getString());
-            QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
-            com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
-
-            while (instancesResults.hasNext()) {
-                QuerySolution qs = instancesResults.next();
-                Iterator<String> iter = qs.varNames();
-                while (iter.hasNext()) {
-                    String str = iter.next();
-                    String val = qs.get(str).toString();
-
-                    SourceInstancePair newVal = new SourceInstancePair(loadFile, val);
-                    if (inputFilesInfo.containsKey(newVal) == false) {
-                        inputFilesInfo.put(newVal, new SequencesVector());
-                    }                    
-                }
-            }
-            
-            instancesQueryExecution.close();
-        }
-        
-        //Double threshold = this.imClass.userConfig.getResultsThreshold();
-        for(int i=0; i< qSequences.size(); i++){
-            
-            UserQueryConfiguration currentSequence = qSequences.get(i);
-            //int currentSequencePosition = currentSequence.getSequencePosition();
-            //Hashtable<String,String> parameters = currentSequence.getParameters();
-            //System.out.println("\n\nQuering sequence "+currentSequence.getSequencePosition() +" --> mnemonic: "+currentSequence.getMnemonic());
-            //SequenceData currentData = new SequenceData(currentSequence);
-            
-            String[] parameterNames = currentSequence.getSortedParameterNamesCopy();
-            String[] parameterTypes = currentSequence.getSortedParameterTypesCopy();
-            String[] stepQueries = currentSequence.getSortedQueriesCopy();
-            
-            for(int k=0; k<stepQueries.length; k++){
-            
-                String currentQuery = stepQueries[k];
-                //System.out.println("currentQuery:\n"+queryPrefixes+currentQuery);
-                Query predicateQuery = QueryFactory.create(queryPrefixes + currentQuery);
-                QueryExecution instancesQueryExecution = QueryExecutionFactory.create(predicateQuery, fileModel);
-                com.hp.hpl.jena.query.ResultSet predicateResults = instancesQueryExecution.execSelect();
-
-                while (predicateResults.hasNext()) {
-                    //System.out.println("Result Found");
-                    QuerySolution qs = predicateResults.next();
-                    Iterator<String> iter = qs.varNames();
-                    String resultLine = "";
-                    boolean gotInstanceUri = false;
-                    String instanceUri ="";
-                    SourceInstancePair searchVal = null;
-                    while (iter.hasNext()) {
-                        String KeyStr = iter.next();
-                        if(!gotInstanceUri){
-                            instanceUri = qs.get(KeyStr).toString();
-                            searchVal  = new SourceInstancePair(loadFile, instanceUri);
-                            gotInstanceUri = true;
+                int sequencePosition = this.imClass.userConfig.getUserQueriesCopy().get(i).getPositionID();
+                String[] paramNames  = this.imClass.userConfig.getUserQueriesCopy().get(i).getSortedParameterNamesCopy();
+                String[] paramTypes  = this.imClass.userConfig.getUserQueriesCopy().get(i).getSortedParameterTypesCopy();
+                
+                indexedDataFromInputFiles.put(sequencePosition, new Hashtable<String,Vector<String>>());
+                
+                for(int k=0; k <paramNames.length; k++){
+                    String currentParamName = paramNames[k];
+                    String currentParamType = paramTypes[k];
+                    
+                    if(currentParamType.equals(ApiConstants.Type_URI)==false) {
+                        if(currentParamType.equals(ApiConstants.Type_Literal) && this.imClass.userConfig.getMinimumLiteralSimilarity() < 1d){
                             continue;
                         }
+                    }
+                    
+                    Vector<String> allValues = inputFilesInfo.collectAllValuesOfSpecificParameter(sequencePosition, currentParamName);
+                    
+                    Vector<String> existingValues = new Vector<String>();
+                    /*
+                    int startIndex = 0;
+                    int maxIndex = allValues.size();
+                    while(startIndex<maxIndex){
+                        System.out.println("startIndex: "+startIndex +" out of "+maxIndex + " for "+ currentParamName + " of sequence "  +sequencePosition +" time: "+Utilities.getCurrentTime());
+                        Vector<String> currentSubset = QueryBuilder.collectSequenctiallyAsubsetOfValues(startIndex, 50, allValues);
+                        startIndex+=currentSubset.size();
                         
-                        String val =""; 
-                        String lang="";
-                        if(qs.get(KeyStr).isLiteral()){
-                            val=qs.get(KeyStr).asLiteral().getString();
-                            lang=qs.get(KeyStr).asLiteral().getLanguage();
-                        }
-                        else{
-                            val=qs.get(KeyStr).toString();
+                        String baseQuery = queryPrefixes.getString()+ "\n" +
+                                "SELECT DISTINCT ?x \n" +
+                                "{\n" +
+                                "  \n" +
+                                ApiConstants.filter_STARTING_URIS_placeHolders +" \n"+
+                                "  ?x a ?class . \n" +
+                                    
+                                
+                                "}\n"+
+                                "ORDER BY ?x";
+                        
+                        String query = QueryBuilder.replaceFilteringPlaceHolders(baseQuery, ApiConstants.filter_STARTING_URIS_placeHolders, "x", currentSubset);
+                        
+                        Query instancesQuery = QueryFactory.create(query);
+                        
+                        QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
+                        com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
+                        while (instancesResults.hasNext()) {
+                            QuerySolution qs = instancesResults.next();
+                            String val = qs.get("x").toString();
+                            if(existingValues.contains(val)==false){
+                                existingValues.add(val);
+                            }
                         }
                         
-                        resultLine +="\t"+instanceUri+"\t"+KeyStr+": " +val + " " + lang;
-                        /*System.out.println(resultLine);
-                        if(val.length()>0 && parameterTypes[k].equals("timespan")){
-                            ValueOf_Timespan vspan = new ValueOf_Timespan(val);
-                        }
-                        */
-                        inputFilesInfo.get(searchVal).addValueToSequence(currentSequence, KeyStr, val, lang);
+                        instancesQueryExecution.close();
                         
                     }
                     
+                    */
+                    System.out.println("Checking existence of uris found in source data.");
+                    java.io.File f = new java.io.File(loadFile);                    
+                    Scanner sc = new Scanner(f);                
+                    int lineCounter = 0;
+                    int printcounter = 0 ;
+                    String line ="";
+                    while(sc.hasNextLine()){
+                        line +=sc.nextLine() +"\n";
+                        lineCounter++;
+                        if(line.length() > 10000){
+                            printcounter++;
+                            if(printcounter%10==0){
+                                System.out.print(".");
+                            }
+                            if(printcounter%1000==0){
+                                System.out.println();
+                            }
+                            
+                            for(int j=0; j<allValues.size(); j++){
+                                String val = allValues.get(j);
+                                if(existingValues.contains(val)==false && line.contains(val)){
+                                 existingValues.add(val);
+                                }
+                            }
+                            
+                            allValues.removeAll(existingValues);
+                            line = "";
+                        }
+                    }
+                    for(int j=0; j<allValues.size(); j++){
+                        String val = allValues.get(j);
+                        if(existingValues.contains(val)==false && line.contains(val)){
+                         existingValues.add(val);
+                        }
+                    }
+                    
+                    indexedDataFromInputFiles.get(sequencePosition).put(currentParamName, existingValues);
                 }
-                instancesQueryExecution.close();                
-            }                       
+            }
+            System.out.println();    
         }
+        
+        //</editor-fold>
+        
+        int firstLevelLoopLIMIT = this.imClass.qWeightsConfig.getQueryLimitSize();
+        int firstLevelLoopCounter = firstLevelLoopLIMIT;
+        int firstLevelLoopOFFSET = -firstLevelLoopLIMIT;
+
+        while (firstLevelLoopCounter == firstLevelLoopLIMIT) {
+
+            Vector<String> instancesFound = new Vector<String>();
+            Hashtable<String, SequencesVector> currentFileInfo = new Hashtable<String, SequencesVector>();
+
+            if (getAllInstances.getString().length() > 0) {
+
+                String query = getAllInstances.getString();
+                firstLevelLoopOFFSET += firstLevelLoopLIMIT;
+                query += "\n LIMIT " + firstLevelLoopLIMIT;
+                if (firstLevelLoopOFFSET > 0) {
+                    query += "\n OFFSET " + firstLevelLoopOFFSET;
+                }
+                firstLevelLoopCounter = 0;
+
+                if (IMAPIClass.DEBUG) {
+                    System.out.println("DEBUG: Just before instances retrieval with Offset " + firstLevelLoopOFFSET);
+                }
+
+                Query instancesQuery = QueryFactory.create(queryPrefixes.getString() + query);
+                QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
+                com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
+                if (IMAPIClass.DEBUG) {
+                    System.out.println("DEBUG: Just after query excecution of instances retrieval");
+                }
+
+                while (instancesResults.hasNext()) {
+                    QuerySolution qs = instancesResults.next();
+                    firstLevelLoopCounter++;
+                    Iterator<String> iter = qs.varNames();
+                    while (iter.hasNext()) {
+
+                        String str = iter.next();
+                        String val = qs.get(str).toString();
+
+                        if (currentFileInfo.containsKey(val) == false) {
+                            currentFileInfo.put(val, new SequencesVector());
+                            instancesFound.add(val);
+                        }
+
+                        //<editor-fold defaultstate="collapsed" desc="If target File and 'check as we read' policy is followed then check for similarity now">
+                        if (dataMode == DataMode.TARGET_DATA && ApiConstants.checkForSimilaritiesAsWeGetResults) {
+
+                            //CHECK FOR SIMILARITIES
+                            Enumeration<String> sourceFilesEnum = inputFilesInfo.keys();
+                            while (sourceFilesEnum.hasMoreElements()) {
+                                String sourceFile = sourceFilesEnum.nextElement();
+                                if (inputFilesInfo.get(sourceFile).containsKey(val)) {
+
+                                    SourceInstancePair pair = new SourceInstancePair(sourceFile, val);
+                                    SourceInstancePair newVal = new SourceInstancePair(loadFile, val);
+
+                                    SourceTargetPair newSTPair = new SourceTargetPair(pair, newVal);
+
+                                    SequenceSimilarityResultVector newSeqVec = new SequenceSimilarityResultVector();
+
+                                    if (pairSimilaritiesInSequences.containsKey(newSTPair) == false) {
+                                        pairSimilaritiesInSequences.put(newSTPair, newSeqVec);
+                                    }
+                                }
+
+                            }
+                        }
+//</editor-fold>
+
+                    }
+                }
+
+                instancesQueryExecution.close();
+            }
+
+            if (IMAPIClass.DEBUG) {
+                System.out.println("DEBUG: instances retrieval ended. Found " + firstLevelLoopCounter + " new instanes.");
+            }
+
+            //second level loop through instaces of first loop
+            int secondLevelLoopIndex = 0;
+            int secondLevelMaxIndex = instancesFound.size();
+
+            while (secondLevelLoopIndex < secondLevelMaxIndex) {
+
+                //all this must get in a loop of instances filtered out
+                Vector<String> secondLevelStartingUris = Utilities.collectSequenctiallyAsubsetOfValues(secondLevelLoopIndex, instanceUrisFilterStepCount, instancesFound);
+                secondLevelLoopIndex += secondLevelStartingUris.size();
+                    
+                //third level loop - loop over sequences
+                for (int thirdLevelLoopIndex = 0; thirdLevelLoopIndex < qSequences.size(); thirdLevelLoopIndex++) {
+
+                    Hashtable<String, Vector<String>> uriValuesToStartingUris = new Hashtable<String, Vector<String>>();
+                    UserQueryConfiguration currentSequence = qSequences.get(thirdLevelLoopIndex);
+                    int sequencePosition = currentSequence.getPositionID();
+                    boolean canFastMethodBeApplied = false;
+                    if (dataMode == DataMode.TARGET_DATA && canQuickFilteringMethodBeFollowedForeachSequence != null) {
+                        canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(thirdLevelLoopIndex);
+                    }
+
+                    String[] parameterNames = currentSequence.getSortedParameterNamesCopy();
+                    String[] parameterTypes = currentSequence.getSortedParameterTypesCopy();
+                    String[] stepQueries = currentSequence.getSortedQueriesCopy();
+
+                    Vector<String> startingUrisForStep = new Vector<String>();
+                    //forth level loop - loop over the steps of each sequence
+                    for (int forthLevelLoopStepIndex = 0; forthLevelLoopStepIndex < stepQueries.length; forthLevelLoopStepIndex++) {
+
+                        String currentQuery = stepQueries[forthLevelLoopStepIndex];
+                        String currentParamName = parameterNames[forthLevelLoopStepIndex];
+                        String currentParamType = parameterTypes[forthLevelLoopStepIndex];
+                        Vector<String> stepValues = new Vector<String>();
+                        
+                        if(forthLevelLoopStepIndex==0){
+                            startingUrisForStep.addAll(secondLevelStartingUris);
+                        }
+                        Vector<String> nextStepStartingUris = new Vector<String>();
+                        if(startingUrisForStep.size()==0){
+                            break;
+                        }
+
+                        
+                        int fifthLevelLoopIndex = 0;
+                        int fifthLevelMaxIndex = startingUrisForStep.size();
+                        while(fifthLevelLoopIndex<fifthLevelMaxIndex){
+                            
+                            Vector<String> currentStepSubsetOfStartingUris = Utilities.collectSequenctiallyAsubsetOfValues(fifthLevelLoopIndex, instanceUrisFilterStepCount, startingUrisForStep);
+                            fifthLevelLoopIndex+=currentStepSubsetOfStartingUris.size();
+                            String fifthLevelQuery  = QueryBuilder.replaceFilteringPlaceHolders(currentQuery, ApiConstants.filter_STARTING_URIS_placeHolders, ApiConstants.startingParameterName, currentStepSubsetOfStartingUris);
+                            
+                            //sixth level loop may be applied here
+                            boolean valuesFilteringLoopExecuted = false;
+                            boolean performValueFiltering = false;
+                            int sixthLevelLoopStartIndex = -1;
+                            int sixthLevelLoopMaxIndex = -1;
+                            if (canFastMethodBeApplied) {
+                                //perform a loop over values                                                      
+                                performValueFiltering = true;
+                                stepValues.addAll(indexedDataFromInputFiles.get(sequencePosition).get(currentParamName));
+                                sixthLevelLoopStartIndex= 0;
+                                sixthLevelLoopMaxIndex = stepValues.size();  
+                            }
+                            
+                            while(valuesFilteringLoopExecuted==false || (sixthLevelLoopMaxIndex>0 && sixthLevelLoopStartIndex<sixthLevelLoopMaxIndex) ){
+                        
+                        
+                                valuesFilteringLoopExecuted = true;
+
+                                String sixthLevelQuery = fifthLevelQuery;
+                                if(performValueFiltering){
+                                    Vector<String> uriValues = Utilities.collectSequenctiallyAsubsetOfValues(sixthLevelLoopStartIndex, valueUrisFilterStepCount, stepValues);
+                                    sixthLevelLoopStartIndex += uriValues.size();
+                                    sixthLevelQuery = QueryBuilder.replaceFilteringPlaceHolders(fifthLevelQuery, ApiConstants.filter_VALUES_placeHolder, currentParamName, uriValues);                                
+                                }
+
+                                //seventh level loop limit and offset must be applied
+                                int seventhLevelLoopLIMIT = this.imClass.qWeightsConfig.getQueryLimitSize();
+                                int seventhLevelLoopCounter = seventhLevelLoopLIMIT;
+                                int seventhLevelLoopOFFSET = -seventhLevelLoopLIMIT;
+
+                                while (seventhLevelLoopCounter == seventhLevelLoopLIMIT) {
+                        
+                            
+                                    String seventhLevelQuery = sixthLevelQuery;
+                                    seventhLevelLoopOFFSET += seventhLevelLoopLIMIT;
+                                    seventhLevelQuery += "\n LIMIT " + seventhLevelLoopLIMIT;
+                                    if (seventhLevelLoopOFFSET > 0) {
+                                        seventhLevelQuery += "\n OFFSET " + seventhLevelLoopOFFSET;
+                                        if (IMAPIClass.DEBUG) {
+                                            System.out.println("7th level with offset " + seventhLevelLoopOFFSET + " seq: " + sequencePosition + " step: " + (forthLevelLoopStepIndex + 1) + " time: " +Utilities.getCurrentTime());
+                                            /*
+                                            if(forthLevelLoopStepIndex==0 && seventhLevelLoopOFFSET>=80000){
+                                                System.out.println(currentStepSubsetOfStartingUris.toString().replace("[", "").replace("]", "").replaceAll(", ", "\n "));
+                                            }*/
+                                        }
+                                    }
+                                    seventhLevelLoopCounter = 0;
+                                    
+
+                                Query predicateQuery = QueryFactory.create(queryPrefixes.getString() + seventhLevelQuery);
+                                QueryExecution instancesQueryExecution = QueryExecutionFactory.create(predicateQuery, fileModel);
+                                com.hp.hpl.jena.query.ResultSet predicateResults = instancesQueryExecution.execSelect();
+
+                                while (predicateResults.hasNext()) {
+
+                                    seventhLevelLoopCounter++;
+
+                                    QuerySolution qs = predicateResults.next();
+
+                                    String startingUri = "";
+                                    String value = "";
+                                    String lang = "";
+
+                                    //<editor-fold defaultstate="collapsed" desc="Get Starting Instance">
+                                    if (qs.contains(ApiConstants.startingParameterName)) {
+                                        RDFNode startingUriNode = qs.get(ApiConstants.startingParameterName);
+                                        if (startingUriNode != null) {
+                                            startingUri = startingUriNode.toString();
+                                        }
+                                    } else {
+                                        System.out.println("DEBUG: No starting instance returned. Check Query Prototypes for sequernce " + currentSequence.getMnemonic() + " step: " + parameterNames[forthLevelLoopStepIndex]);
+                                    }
+                                //</editor-fold>
+
+                                    //<editor-fold defaultstate="collapsed" desc="Get step output value and lang">
+                                    if (qs.contains(currentParamName)) {
+                                        RDFNode valueNode = qs.get(currentParamName);
+                                        if (valueNode != null) {
+                                            if (valueNode.isLiteral()) {
+                                                value = valueNode.asLiteral().getString();
+                                                lang = valueNode.asLiteral().getLanguage();
+                                            } else {
+                                                value = valueNode.toString();
+                                            }
+                                        }
+                                    } else {
+                                        System.out.println("DEBUG: No value returned. Check Query Prototypes for sequernce " + currentSequence.getMnemonic() + " step: " + parameterNames[forthLevelLoopStepIndex]);
+                                    }
+                                //</editor-fold>
+
+                                    //in case one wants to print this info
+                                    String resultLine = "\t" + startingUri + "\t" + currentParamName + ": " + value + " " + lang;
+                                    //System.out.println(resultLine);
+
+                                    //PREPARE NEXT STARTING URIS
+                                    if (currentParamType.equals(ApiConstants.Type_URI)) {
+                                        if (nextStepStartingUris.contains(value) == false) {
+                                            nextStepStartingUris.add(value);
+                                        }
+                                    }
+
+                                    handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
+                                            currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
+                                            dataMode, loadFile, inputFilesInfo, pairSimilaritiesInSequences, canFastMethodBeApplied);
+                                    /*
+                                        handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
+                                                currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
+                                                dataMode, loadFile, inputFilesInfo, pairSimilaritiesInSequences, canFastMethodBeApplied);
+                                        
+                                    handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
+                                            currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
+                                            dataMode, loadFile, inputFilesInfo, pairSimilaritiesInSequences, canFastMethodBeApplied);
+*/
+                                    }
+                                
+                                    instancesQueryExecution.close();
+
+                                }//end of seventh level loop over the set of values (Limit / offset)
+
+
+                                
+                                //RETEST CONDITION AND BREAK WHAT?
+                                //if no instances found then do not continue
+                                /*
+                                if (currentParamType.equals(ApiConstants.Type_URI) &&  nextStepStartingUris.size() == 0) {
+                                    break;
+                                }                         
+                                */
+
+                            }//end of potentially sixth level loop that will filter over values if fast method can be applied to the whole sequence
+                            
+                            
+                        }// end of fifth level loop over starting uris of each step
+                        
+                        startingUrisForStep = new Vector<String>(nextStepStartingUris);
+                    }//end of forth level loop -- steps
+                
+                }//end of third level loop over sequences
+                
+                //if (IMAPIClass.DEBUG) {
+                    double percentage =((double) (secondLevelLoopIndex + totalProcessedInstances) * 100d) / (double) totalInstancesIntheFile;
+                    System.out.println("\tProcessed next " + secondLevelLoopIndex + " values. Percentage: " + Utilities.df.format(percentage) + "% at time: " + Utilities.getCurrentTime());
+                //}
+
+            }//end of second level loop over subpack of filtering instances
+            
+            //if (IMAPIClass.DEBUG) {
+                totalProcessedInstances += firstLevelLoopCounter;
+                double percentage = ((double) totalProcessedInstances * 100d) / (double) totalInstancesIntheFile;
+                System.out.println("Processed " + totalProcessedInstances + " instances. Total number of instaces in file: " + totalInstancesIntheFile + ". File percentage: " + Utilities.df.format(percentage) + "% at time: " + Utilities.getCurrentTime());
+            //}
+
+            if (dataMode == DataMode.SOURCE_DATA) {
+                if (inputFilesInfo.containsKey(loadFile) == false) {
+                    inputFilesInfo.put(loadFile, currentFileInfo);
+                } else {
+                    //currentFileInfo will only contain new keys
+                    inputFilesInfo.get(loadFile).putAll(currentFileInfo);
+                }
+            }
+
+        }//end of first level loop over instances of file
 
         return ApiConstants.IMAPISuccessCode;
     }
     
-    int retrieveDataFromOnlineDBAndCollectSimilarities(OnlineDatabase db,
-            Hashtable<String,Model> allRetrievedModels,
-            Hashtable<SourceInstancePair, SequencesVector> inputSourceInfo, 
-            Hashtable<SourceInstancePair, SequencesVector> targetSourceInfo, 
-            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences){
-            
+    int retrieveDataFrom_SourceFile(CidocCrmCompatibleFile cidocLoadFile,
+            Hashtable<String, Model> allRetrievedModels,
+            SourceDataHolder inputFilesInfo) throws FileNotFoundException {
+        return retrieveDataFromFile(cidocLoadFile, allRetrievedModels, inputFilesInfo, DataMode.SOURCE_DATA, null, null);
+    }
+
+    int retrieveDataFrom_TargetFileAndCollectSimilarities(CidocCrmCompatibleFile cidocLoadFile,
+            Hashtable<String, Model> allRetrievedModels,
+            SourceDataHolder inputFilesInfo,
+            Vector<Boolean> canQuickFilteringMethodBeFollowedForeachSequence,
+            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences) throws FileNotFoundException {
+
+        return retrieveDataFromFile(cidocLoadFile, allRetrievedModels, inputFilesInfo, DataMode.TARGET_DATA, canQuickFilteringMethodBeFollowedForeachSequence, pairSimilaritiesInSequences);        
+    }
+
+    int retrieveDataFrom_OnlineDatabaseAndCollectSimilarities(OnlineDatabase db,
+            Hashtable<String, Model> allRetrievedModels,
+            SourceDataHolder inputSourceInfo,
+            Vector<Boolean> canQuickFilteringMethodBeFollowedForeachSequence,
+            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences) {
+
         QueryBuilder qBuilder = new QueryBuilder(this.imClass);
         
-
-        //Hashtable<String, String> allNamespacesThatWillBeUsed = new Hashtable<String, String>();
-        Hashtable<String,String> dbNs = db.getDbNamesapcesCopy();
-
-        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
-
-
-        Hashtable<String,String> validCrmNsUsed = new Hashtable<String,String>();
+        StringObject queryPrefixes = new StringObject("");
+        StringObject getAllInstances = new StringObject("");
+        StringObject countAllInstances = new StringObject("");
+        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();        
+        boolean allSequencesFast = false;        
+        if (canQuickFilteringMethodBeFollowedForeachSequence != null && canQuickFilteringMethodBeFollowedForeachSequence.contains(false) == false) {
+            allSequencesFast = true;
+        }
+        int instanceUrisFilterStepCount = this.imClass.qWeightsConfig.getQueryFilteringInstancesCount();
+        int valueUrisFilterStepCount = this.imClass.qWeightsConfig.getQueryFilteringValuesCount();
         
-        Model finalFileModel = ModelFactory.createDefaultModel();
-        String queryPrefixes ="";
+        
+        //<editor-fold defaultstate="collapsed" desc="prepare queries">
+        Hashtable<String, String> dbNs = db.getDbNamesapcesCopy();
 
+        //get available list of cidoc namepsaces and get another structure
+        //that will be filled with the subset of the above that is declared for this db
+        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
+        Hashtable<String, String> validCrmNsUsed = new Hashtable<String, String>();
 
+        
         Vector<String> nKeys = new Vector<String>(dbNs.keySet());
-        //Collections.sort(nKeys, Collections.reverseOrder());
 
         for (int m = 0; m < nKeys.size(); m++) {
             String keyStr = nKeys.get(m);
             String fileNs = dbNs.get(keyStr);
 
-
-            queryPrefixes +="PREFIX "+keyStr+": <" +fileNs+">\r\n";
-            if(validCrmNs.contains(fileNs)){
-                validCrmNsUsed.put(keyStr,fileNs);
+            queryPrefixes.setString(queryPrefixes.getString()+"PREFIX " + keyStr + ": <" + fileNs + ">\n");
+            if (validCrmNs.contains(fileNs)) {
+                validCrmNsUsed.put(keyStr, fileNs);
             }
-            /*
-            if (validCrmNamespaces.contains(fileNs)) {
-                allNamespacesThatWillBeUsed.put(keyStr, fileNs);
-            }
-            */
-
-            Model loopModel = allRetrievedModels.get(fileNs);
-            
-            //queryNamespacesDeclaration += "PREFIX " + keyStr + ": <" + fileNs + ">\n";
-            finalFileModel = finalFileModel.union(loopModel);
         }
-        
-        queryPrefixes+="\r\n";
 
-        StringObject getAllInstances = new StringObject("");
-        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();
+        queryPrefixes.setString(queryPrefixes.getString()+"\n");
+
         
-        
+
         //prepare the queries --> retrieve from model the class and predicate names
         Model prepareQueriesModel = ModelFactory.createDefaultModel();
         Enumeration<String> validCrmEnum = validCrmNsUsed.keys();
-        while(validCrmEnum.hasMoreElements()){
+        while (validCrmEnum.hasMoreElements()) {
             Model loopModel = allRetrievedModels.get(validCrmNsUsed.get(validCrmEnum.nextElement()));
             prepareQueriesModel = prepareQueriesModel.union(loopModel);
         }
-        
-        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, db.getTargetDatabasePredicateDirectionUsage(), getAllInstances, qSequences);
-        if(ret!= ApiConstants.IMAPISuccessCode){
+
+        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, this.imClass.userConfig.getComparisonMode(), db.getTargetDatabasePredicateDirectionUsage(), getAllInstances, countAllInstances, qSequences);
+        if (ret != ApiConstants.IMAPISuccessCode) {
             return ret;
         }
-        
-        
-        //System.out.println("=======================================");            
-        
-        //System.out.println("Starting queries on database: " + db.getDbName());
+        //</editor-fold>
         
         
         OnlineDatabaseActions qSource = new OnlineDatabaseActions(this.imClass, db);
+
+        long totalProcessedInstances = 0;
+        long totalInstancesIntheFile = qSource.getDatabaseInstancesCount(queryPrefixes, countAllInstances);
         
-        //retrieve instances 
-        if(getAllInstances.getString().length()>0){
-            String baseQueryString = queryPrefixes+getAllInstances.getString();//qBuild.get_All_Instances_Query(ApiConstants.getDBTargetNamespace(this.imClass.userConfig.getComparisonMode()), classId).trim();
-            
 
-            try {
-                ret = qSource.retrieveAllInstancesData(baseQueryString, inputSourceInfo, targetSourceInfo, pairSimilaritiesInSequences);
-            } catch (UnsupportedEncodingException e) {
-
-                System.out.println("UnsupportedEncodingException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
+        System.out.println("Database instances number: " + totalInstancesIntheFile);
+        if(totalInstancesIntheFile==0){
+            return ApiConstants.IMAPISuccessCode;
+        }
+        
+        //<editor-fold defaultstate="collapsed" desc="Fill indexedDataFromInputFiles with existing values of the file">
+        //first level   -- integer - sequence position
+        //second level  -- String parameterName 
+        //third level   -- Vector of uris on that parameter name
+        Hashtable<Integer,Hashtable<String,Vector<String>>> indexedDataFromInputFiles = new Hashtable<Integer,Hashtable<String,Vector<String>>>();           
+        
+        if(canQuickFilteringMethodBeFollowedForeachSequence.contains(true)){
+            System.out.println("Checking existence of uris found in source data.");
+        }
+        for (int i = 0; i < this.imClass.userConfig.getUserQueriesCopy().size(); i++) {
+                boolean canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(i);
+                if(canFastMethodBeApplied == false){
+                    continue;
+                }
+                
+                
+                int sequencePosition = this.imClass.userConfig.getUserQueriesCopy().get(i).getPositionID();
+                String[] paramNames  = this.imClass.userConfig.getUserQueriesCopy().get(i).getSortedParameterNamesCopy();
+                String[] paramTypes  = this.imClass.userConfig.getUserQueriesCopy().get(i).getSortedParameterTypesCopy();
+                
+                indexedDataFromInputFiles.put(sequencePosition, new Hashtable<String,Vector<String>>());
+                
+                for(int k=0; k <paramNames.length; k++){
+                    String currentParamName = paramNames[k];
+                    String currentParamType = paramTypes[k];
+                    
+                    if(currentParamType.equals(ApiConstants.Type_URI)==false) {
+                        if(currentParamType.equals(ApiConstants.Type_Literal) && this.imClass.userConfig.getMinimumLiteralSimilarity() < 1d){
+                            continue;
+                        }
+                    }
+                    
+                    Vector<String> allValues = inputSourceInfo.collectAllValuesOfSpecificParameter(sequencePosition, currentParamName);                    
+                    Vector<String> existingValues = new Vector<String>();
+                    
+                    int startIndex = 0;
+                    int maxIndex = allValues.size();
+                    int printcounter = 0 ;
+                    while(startIndex<maxIndex){
+                        printcounter++;
+                        System.out.print(".");
+                        if(printcounter%10==0){
+                            System.out.println();
+                        }                        
                         
-            } catch (MalformedURLException e) {
-
-                System.out.println("MalformedURLException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
-            } catch (IOException e) {
-
-                System.out.println("IOException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
-            }
-            
-            if(ret!=ApiConstants.IMAPISuccessCode){
-                return ret;
-            }
+                        //System.out.println("startIndex: "+startIndex +" out of "+maxIndex + " for "+ currentParamName + " of sequence "  +sequencePosition +" time: "+Utilities.getCurrentTime());
+                        Vector<String> currentSubset = Utilities.collectSequenctiallyAsubsetOfValues(startIndex, instanceUrisFilterStepCount, allValues);
+                        startIndex+=currentSubset.size();
+                        
+                        String baseQuery = queryPrefixes.getString()+ "\n" +
+                                "SELECT DISTINCT ?x \n" +
+                                "{\n" +
+                                "  \n" +
+                                ApiConstants.filter_STARTING_URIS_placeHolders +" \n"+
+                                "  ?x ?pred ?class . \n" +
+                                "}\n"+
+                                "ORDER BY ?x ";
+                        
+                        String query = QueryBuilder.replaceFilteringPlaceHolders(baseQuery, ApiConstants.filter_STARTING_URIS_placeHolders, "x", currentSubset);
+                        
+                        ret = qSource.getUris(query, existingValues);
+                        if(ret!=ApiConstants.IMAPISuccessCode){
+                            return ret;
+                        }
+                        
+                    }
+                    System.out.println();
+                    
+                    indexedDataFromInputFiles.get(sequencePosition).put(currentParamName, existingValues);
+                }
         }
+        //</editor-fold>
         
         
-        System.out.println();
-        System.out.println();
-        //retrieve sequences data
-        for(int i=0; i< qSequences.size(); i++){
-            
-            UserQueryConfiguration currentSequence = qSequences.get(i);
-            
-            try {
-                ret = qSource.retrieveDataOfSpecificSequence(queryPrefixes, currentSequence, inputSourceInfo, targetSourceInfo, pairSimilaritiesInSequences);
-            } catch (UnsupportedEncodingException e) {
-                System.out.println("UnsupportedEncodingException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
-            } catch (MalformedURLException e) {
+        
+        //First level loop --> Query in steps of some thousand instances this.imClass.qWeightsConfig.getQueryLimitSize() = 4000
+        //Second level loop each sequence start from ApiConstants.instanceUrisFilterStepCount = 500 starting instances
+        //Perhaps a third level loop is required in case this subset (ApiConstants.instanceUrisFilterStepCount = 500) returns too many results
+        //first level loop - loop over instances
+        int firstLevelLoopLIMIT = this.imClass.qWeightsConfig.getQueryLimitSize();
+        int firstLevelLoopCounter = firstLevelLoopLIMIT;
+        int firstLevelLoopOFFSET = -firstLevelLoopLIMIT;
 
-                System.out.println("MalformedURLException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
-            } catch (IOException e) {
+        while (firstLevelLoopCounter == firstLevelLoopLIMIT) {
 
-                System.out.println("IOException caught: " + e.getMessage());
-                e.printStackTrace();
-                return ApiConstants.IMAPIFailCode;
+            Vector<String> instancesFound = new Vector<String>();
+            Hashtable<String, SequencesVector> currentFileInfo = new Hashtable<String, SequencesVector>();
+            //Hashtable<SourceTargetPair, SequenceSimilarityResultVector> firtsiLoopPairSimilaritiesInSequences = new Hashtable<SourceTargetPair,SequenceSimilarityResultVector>();
+
+            if (getAllInstances.getString().length() > 0) {
+
+                String query = getAllInstances.getString();
+                firstLevelLoopOFFSET += firstLevelLoopLIMIT;
+                query += "\n LIMIT " + firstLevelLoopLIMIT;
+                if (firstLevelLoopOFFSET > 0) {
+                    query += "\n OFFSET " + firstLevelLoopOFFSET;
+                }
+                firstLevelLoopCounter = 0;
+
+                if (IMAPIClass.DEBUG) {
+                    System.out.println("DEBUG: Just before instances retrieval with Offset " + firstLevelLoopOFFSET);
+                }
+
+                String instancesQuery = queryPrefixes.getString() + query;
+                ret = qSource.getUris(instancesQuery, instancesFound);
+                if(ret!=ApiConstants.IMAPISuccessCode){
+                    return ret;
+                }
+                /*
+                if(IMAPIClass.DEBUG){
+                    instancesFound= new Vector<String>();
+                    instancesFound.add("http://collection.britishmuseum.org/id/person-institution/62763");
+                }
+                */
+                firstLevelLoopCounter+=instancesFound.size();
+                for(int m=0; m <instancesFound.size();m++){
+                    
+                    String val = instancesFound.get(m);
+                    
+                    if (currentFileInfo.containsKey(val) == false) {
+                        currentFileInfo.put(val, new SequencesVector());
+                    }
+                    
+                    //<editor-fold defaultstate="collapsed" desc="If target File and 'check as we read' policy is followed then check for similarity now">
+                    if (ApiConstants.checkForSimilaritiesAsWeGetResults) {
+
+                        //CHECK FOR SIMILARITIES
+                        Enumeration<String> sourceFilesEnum = inputSourceInfo.keys();
+                        while (sourceFilesEnum.hasMoreElements()) {
+                            String sourceFile = sourceFilesEnum.nextElement();
+                            if (inputSourceInfo.get(sourceFile).containsKey(val)) {
+
+                                SourceInstancePair pair = new SourceInstancePair(sourceFile, val);
+                                SourceInstancePair newVal = new SourceInstancePair(db.getDBChoice().toString(), val);
+
+                                SourceTargetPair newSTPair = new SourceTargetPair(pair, newVal);
+
+                                SequenceSimilarityResultVector newSeqVec = new SequenceSimilarityResultVector();
+
+                                if (pairSimilaritiesInSequences.containsKey(newSTPair) == false) {
+                                    pairSimilaritiesInSequences.put(newSTPair, newSeqVec);
+                                }
+                            }
+
+                        }
+                    }
+                    //</editor-fold>
+                }
+                
             }
+
+            if (IMAPIClass.DEBUG) {
+                System.out.println("DEBUG: instances retrieval ended. Found " + firstLevelLoopCounter + " new instanes.");
+            }
+
             
-            if(ret!=ApiConstants.IMAPISuccessCode){
-                return ret;
-            }
-                         
-        }
-       
+            
+            //second level loop through instaces of first loop
+            int secondLevelLoopIndex = 0;
+            int secondLevelMaxIndex = instancesFound.size();
+
+            while (secondLevelLoopIndex < secondLevelMaxIndex) {
+
+                //all this must get in a loop of instances filtered out                
+                Vector<String> secondLevelStartingUris = Utilities.collectSequenctiallyAsubsetOfValues(secondLevelLoopIndex, instanceUrisFilterStepCount, instancesFound);
+                secondLevelLoopIndex += secondLevelStartingUris.size();
+
+                    
+                //third level loop - loop over sequences
+                for (int thirdLevelLoopIndex = 0; thirdLevelLoopIndex < qSequences.size(); thirdLevelLoopIndex++) {
+
+                    Hashtable<String, Vector<String>> uriValuesToStartingUris = new Hashtable<String, Vector<String>>();
+                    UserQueryConfiguration currentSequence = qSequences.get(thirdLevelLoopIndex);
+                    int sequencePosition = currentSequence.getPositionID();
+                    boolean canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(thirdLevelLoopIndex);
+                
+
+                    String[] parameterNames = currentSequence.getSortedParameterNamesCopy();
+                    String[] parameterTypes = currentSequence.getSortedParameterTypesCopy();
+                    String[] stepQueries = currentSequence.getSortedQueriesCopy();
+
+                    Vector<String> startingUrisForStep = new Vector<String>();
+                    //forth level loop - loop over the steps of each sequence
+                    for (int forthLevelLoopStepIndex = 0; forthLevelLoopStepIndex < stepQueries.length; forthLevelLoopStepIndex++) {
+
+                        String currentQuery = stepQueries[forthLevelLoopStepIndex];
+                        String currentParamName = parameterNames[forthLevelLoopStepIndex];
+                        
+                        String currentParamType = parameterTypes[forthLevelLoopStepIndex];
+                        String nextParamType = "";
+                        if((forthLevelLoopStepIndex+1)<(parameterTypes.length)){
+                            nextParamType = parameterTypes[(forthLevelLoopStepIndex+1)];
+                        }
+                        Vector<String> stepValues = new Vector<String>();
+                        
+                        if(forthLevelLoopStepIndex==0){
+                            startingUrisForStep.addAll(secondLevelStartingUris);
+                        }
+                        Vector<String> nextStepStartingUris = new Vector<String>();
+                        if(IMAPIClass.DEBUG){
+                            System.out.println("\t\t\tRetrieving "+currentParamName+". Starting uris for this step: " + startingUrisForStep.size());
+                        }
+                        if(startingUrisForStep.size()==0){
+                            break;
+                        }
+                        
+                        int fifthLevelLoopIndex = 0;
+                        int fifthLevelMaxIndex = startingUrisForStep.size();
+                        while(fifthLevelLoopIndex<fifthLevelMaxIndex){
+                            
+                            Vector<String> currentStepSubsetOfStartingUris = Utilities.collectSequenctiallyAsubsetOfValues(fifthLevelLoopIndex, instanceUrisFilterStepCount, startingUrisForStep);
+                            fifthLevelLoopIndex+=currentStepSubsetOfStartingUris.size();
+                            String fifthLevelQuery  = QueryBuilder.replaceFilteringPlaceHolders(currentQuery, ApiConstants.filter_STARTING_URIS_placeHolders, ApiConstants.startingParameterName, currentStepSubsetOfStartingUris);
+                            
+                            //sixth level loop may be applied here
+                            boolean valuesFilteringLoopExecuted = false;
+                            boolean performValueFiltering = false;
+                            int sixthLevelLoopStartIndex = -1;
+                            int sixthLevelLoopMaxIndex = -1;
+                            if (canFastMethodBeApplied) {
+                                //perform a loop over values                                                      
+                                performValueFiltering = true;
+                                stepValues.addAll(indexedDataFromInputFiles.get(sequencePosition).get(currentParamName));
+                                sixthLevelLoopStartIndex= 0;
+                                sixthLevelLoopMaxIndex = stepValues.size();  
+                            }
+                            
+                            while(valuesFilteringLoopExecuted==false || (sixthLevelLoopMaxIndex>0 && sixthLevelLoopStartIndex<sixthLevelLoopMaxIndex) ){
+                            
+                                valuesFilteringLoopExecuted = true;
+
+                                String sixthLevelQuery = fifthLevelQuery;
+                                if(performValueFiltering){
+                                    Vector<String> uriValues = Utilities.collectSequenctiallyAsubsetOfValues(sixthLevelLoopStartIndex, valueUrisFilterStepCount, stepValues);
+                                    sixthLevelLoopStartIndex += uriValues.size();
+                                    sixthLevelQuery = QueryBuilder.replaceFilteringPlaceHolders(fifthLevelQuery, ApiConstants.filter_VALUES_placeHolder, currentParamName, uriValues);                                
+                                }
+
+                                //seventh level loop limit and offset must be applied
+                                int seventhLevelLoopLIMIT = this.imClass.qWeightsConfig.getQueryLimitSize();
+                                int seventhLevelLoopCounter = seventhLevelLoopLIMIT;
+                                int seventhLevelLoopOFFSET = -seventhLevelLoopLIMIT;
+
+                                while (seventhLevelLoopCounter == seventhLevelLoopLIMIT) {
+
+                                    String seventhLevelQuery = sixthLevelQuery;
+                                    seventhLevelLoopOFFSET += seventhLevelLoopLIMIT;
+                                    seventhLevelQuery += "\n LIMIT " + seventhLevelLoopLIMIT;
+                                    if (seventhLevelLoopOFFSET > 0) {
+                                        seventhLevelQuery += "\n OFFSET " + seventhLevelLoopOFFSET;
+                                        if (IMAPIClass.DEBUG) {
+                                            System.out.println("7th level with offset " + seventhLevelLoopOFFSET + " seq: " + sequencePosition + " step: " + (forthLevelLoopStepIndex + 1) + " time: " +Utilities.getCurrentTime());
+                                            /*
+                                            if(forthLevelLoopStepIndex==0 && seventhLevelLoopOFFSET>=80000){
+                                                System.out.println(currentStepSubsetOfStartingUris.toString().replace("[", "").replace("]", "").replaceAll(", ", "\n "));
+                                            }*/
+                                        }
+                                    }
+                                    seventhLevelLoopCounter = 0;
+
+                                    String seventhLevelQueryForDb = queryPrefixes.getString() + seventhLevelQuery;
+                                    
+                                    Vector<DataRecord[]> stepVals = new Vector<DataRecord[]>();
+                                    if(IMAPIClass.DEBUG){
+                                        //System.out.println("\t\t\t\tPerforming database query. fifthLevelLoopIndex: "+fifthLevelLoopIndex+" seventhLevelLoopOFFSET " +seventhLevelLoopOFFSET+" time: " +Utilities.getCurrentTime() );
+                                    }
+                                    ret = qSource.getUriPairs(seventhLevelQueryForDb, ApiConstants.startingParameterName, currentParamName,currentParamType, stepVals);
+                                    if(ret!=ApiConstants.IMAPISuccessCode){
+                                        return ret;
+                                    }
+                                    seventhLevelLoopCounter+=stepVals.size();
+                                    for(int tempIndex =0; tempIndex< stepVals.size(); tempIndex++){
+
+                                        String startingUri = "";
+                                        String value = "";
+                                        String lang = "";
+                                        
+                                        DataRecord[] currentRec = stepVals.get(tempIndex);
+                                        if(currentRec==null || currentRec.length!=2){
+                                            if(IMAPIClass.DEBUG){
+                                                System.out.println("Propably an error exists in getUriPairs method. Returned a null value or an array with length !=2.");
+                                            }
+                                            return ApiConstants.IMAPIFailCode;
+                                        }
+                                        
+
+                                        
+                                        startingUri = currentRec[0].getValue();
+                                        value = currentRec[1].getValue();
+                                        lang = currentRec[1].getLang();
+
+                                       
+                                        //PREPARE NEXT STARTING URIS
+                                        if (currentParamType.equals(ApiConstants.Type_URI)) {
+                                            if (nextStepStartingUris.contains(value) == false) {
+                                                nextStepStartingUris.add(value);
+                                            }
+                                        }
+
+                                        handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
+                                                currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
+                                                DataMode.TARGET_DATA, db.getDBChoice().toString(), inputSourceInfo, pairSimilaritiesInSequences, canFastMethodBeApplied);
+
+                                    }
+
+                                }//end of seventh level loop over the set of values (Limit / offset)
+
+
+                                
+                                //RETEST CONDITION AND BREAK WHAT?
+                                //if no instances found then do not continue
+                                /*
+                                if (currentParamType.equals(ApiConstants.Type_URI) &&  nextStepStartingUris.size() == 0) {
+                                    break;
+                                }                         
+                                */
+
+                            }//end of potentially sixth level loop that will filter over values if fast method can be applied to the whole sequence
+                            
+                            
+                        }// end of fifth level loop over starting uris of each step
+                        
+                        startingUrisForStep = new Vector<String>(nextStepStartingUris);
+                        
+                        
+                    }//end of forth level loop over steps
+
+                }//end of third level loop over sequences
+                
+                //if (IMAPIClass.DEBUG) {
+                    double percentage =((double) (secondLevelLoopIndex + totalProcessedInstances) * 100d) / (double) totalInstancesIntheFile;
+                    System.out.println("\tProcessed next " + secondLevelLoopIndex + " values. Percentage: " + Utilities.df.format(percentage) + "% at time: " + Utilities.getCurrentTime());
+                //}
+            }//end of second level loop over subpack of filtering instances
+            
+            //if (IMAPIClass.DEBUG) {
+                totalProcessedInstances += firstLevelLoopCounter;
+                double percentage = ((double) totalProcessedInstances * 100d) / (double) totalInstancesIntheFile;
+                System.out.println("Processed " + totalProcessedInstances + " instances. Total number of instaces in "+db.getDbName()+": " + totalInstancesIntheFile + ". Percentage: " + Utilities.df.format(percentage) + "% at time: " + Utilities.getCurrentTime());
+            //}
+
+            //pairSimilaritiesInSequences.putAll(firtsiLoopPairSimilaritiesInSequences);
+        }//end of first level loop over instances of file
+        
+        
+
         return ApiConstants.IMAPISuccessCode;
     }
     
+    //may be improved for speed
+    private void handlePairOf_StartingUri_and_Value(int queryStepIndex, String startingUri, String value, String lang,
+            UserQueryConfiguration currentSequence, 
+            Hashtable<String, SequencesVector> currentFileInfo,
+            String currentParamName, 
+            String currentParamType,            
+            Hashtable<String, Vector<String>> uriValuesToStartingUris,
+            DataMode dataMode,
+            String sourceName,
+            SourceDataHolder inputFilesInfo,
+            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences,
+            boolean canFastMethodBeApplied) {
 
-    static boolean containsValuesOfSpecificParameter(int sequencePosition,  String parameterName, Hashtable<SourceInstancePair, SequencesVector> sourceInfo){
-        
-        Enumeration<SourceInstancePair> pairEnum = sourceInfo.keys();
-        while(pairEnum.hasMoreElements()){
-            SequencesVector seqVec = sourceInfo.get(pairEnum.nextElement());
+        if (dataMode == DataMode.SOURCE_DATA || (dataMode == DataMode.TARGET_DATA && ApiConstants.checkForSimilaritiesAsWeGetResults == false) ) {
             
-            if(seqVec==null || seqVec.size()==0){
-                continue;
-            }
-            
-            SequenceData seqData = seqVec.getSequenceDataAtPosition(sequencePosition);
-            if(seqData==null){
-                continue;
-            }
-            
-            Vector<DataRecord> pairVals = seqData.getValuesOfKey(parameterName);
-            
-            for(int i=0; i<pairVals.size();i++){
-                if(pairVals.get(i).getValue().trim().length()>0){
-                    return true;
+            if (queryStepIndex == 0) {
+                
+                currentFileInfo.get(startingUri).addValueToSequence(currentSequence, currentParamName, value, lang);
+
+                if (currentParamType.equals(ApiConstants.Type_URI)) {
+                    if (uriValuesToStartingUris.containsKey(value)) {
+                        if (uriValuesToStartingUris.get(value).contains(startingUri) == false) {
+                            uriValuesToStartingUris.get(value).add(startingUri);
+                        }
+                    } else {
+                        Vector<String> vals = new Vector<String>();
+                        vals.add(startingUri);
+                        uriValuesToStartingUris.put(value, vals);
+                    }
                 }
-                       
-            }
-        }
-        return false;
-    }
-    static Vector<String> collectAllValuesOfSpecificParameter(int sequencePosition,  String parameterName, Hashtable<SourceInstancePair, SequencesVector> sourceInfo){
-        Vector<String> returnVals = new Vector<String>();
-        
-        Enumeration<SourceInstancePair> pairEnum = sourceInfo.keys();
-        while(pairEnum.hasMoreElements()){
-            SequencesVector seqVec = sourceInfo.get(pairEnum.nextElement());
-            
-            if(seqVec==null || seqVec.size()==0){
-                continue;
-            }
-            
-            SequenceData seqData = seqVec.getSequenceDataAtPosition(sequencePosition);
-            if(seqData==null){
-                continue;
-            }
-            
-            Vector<DataRecord> pairVals = seqData.getValuesOfKey(parameterName);
-            for(int i=0; i<pairVals.size();i++){
-                if(returnVals.contains(pairVals.get(i).getValue())==false){
-                    returnVals.add(pairVals.get(i).getValue());
+
+            } else {
+
+                //get starting uris of
+                Vector<String> initiaInstances = uriValuesToStartingUris.get(startingUri);
+
+                if (currentParamType.equals(ApiConstants.Type_URI)) {
+
+                    if (uriValuesToStartingUris.containsKey(value)) {
+
+                        if (initiaInstances != null && initiaInstances.size() > 0) {
+                            for (int mergeIndex = 0; mergeIndex < initiaInstances.size(); mergeIndex++) {
+                                if (uriValuesToStartingUris.get(value).contains(initiaInstances.get(mergeIndex)) == false) {
+                                    uriValuesToStartingUris.get(value).add(initiaInstances.get(mergeIndex));
+                                }
+                            }
+                        }
+                    } else {
+                        if (initiaInstances != null && initiaInstances.size() > 0) {
+                            uriValuesToStartingUris.put(value, initiaInstances);
+                        }
+                    }
+
+                    initiaInstances = uriValuesToStartingUris.get(value);
+
+                }
+
+                if (initiaInstances != null && initiaInstances.size() > 0) {
+                    for (int mergeIndex = 0; mergeIndex < initiaInstances.size(); mergeIndex++) {
+                        //SourceInstancePair searchVal = new SourceInstancePair(sourceName, initiaInstances.get(mergeIndex));
+                        currentFileInfo.get(initiaInstances.get(mergeIndex)).addValueToSequence(currentSequence, currentParamName, value, lang);
+                    }
                 }
             }
-        }
-        
-        return returnVals;
-    }
-    
-    static Vector<String> collectAllURIValues(Hashtable<SourceInstancePair, SequencesVector> sourceInfo){
-        Vector<String> returnVals = new Vector<String>();
-        
-        Enumeration<SourceInstancePair> pairEnum = sourceInfo.keys();
-        while(pairEnum.hasMoreElements()){
-            SourceInstancePair pair = pairEnum.nextElement();
+        } else {
             
-            if(returnVals.contains(pair.getInstanceUri())==false){
-                returnVals.add(pair.getInstanceUri());
-            }            
+            
+            
+
+            if (queryStepIndex == 0) {
+
+                SourceInstancePair searchVal = new SourceInstancePair(sourceName, startingUri);
+                currentFileInfo.get(startingUri).addValueToSequence(currentSequence, currentParamName, value, lang);
+
+                //keep track of values with related instances
+                if (currentParamType.equals(ApiConstants.Type_URI)) {
+                    if (uriValuesToStartingUris.containsKey(value)) {
+                        if (uriValuesToStartingUris.get(value).contains(startingUri) == false) {
+                            uriValuesToStartingUris.get(value).add(startingUri);
+                        }
+                    } else {
+                        Vector<String> vals = new Vector<String>();
+                        vals.add(startingUri);
+                        uriValuesToStartingUris.put(value, vals);
+                    }
+                }
+                DataRecord checkRecord = new DataRecord(value, lang);
+
+                Enumeration<String> filesEnum = inputFilesInfo.keys();
+                while (filesEnum.hasMoreElements()) {
+                    String file = filesEnum.nextElement();
+                    Hashtable<String, SequencesVector> fileinfo = inputFilesInfo.get(file);
+
+                    Enumeration<String> instanceEnum = fileinfo.keys();
+                    while (instanceEnum.hasMoreElements()) {
+                        String sourceuri = instanceEnum.nextElement();
+                        SequencesVector pairdata = fileinfo.get(sourceuri);
+
+                        SequenceData seqData = pairdata.getSequenceDataAtPosition(currentSequence.getPositionID());
+
+                        if (seqData == null) {
+                            continue;
+                        }
+
+                        Vector<DataRecord> sourceVals = seqData.getValuesOfKey(currentParamName);
+                        if (sourceVals == null || sourceVals.size() == 0) {
+                            continue;
+                        }
+
+                        if (canFastMethodBeApplied && sourceVals.contains(checkRecord) == false) {
+                            continue;
+                        }
+
+                        DataRecord srcCompareRecord = new DataRecord("", "");
+
+                        Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord);
+                        if (tempComparisonResult > 0d) {
+
+                            SourceInstancePair pair = new SourceInstancePair(file, sourceuri);
+                            SourceTargetPair newSTPair = new SourceTargetPair(pair, searchVal);
+
+                            SequenceSimilarityResult newSimResult = new SequenceSimilarityResult(currentSequence.getPositionID(), seqData.getSchemaInfo().getMnemonic(), seqData.getSchemaInfo().getWeight());
+                            newSimResult.setNewSimilarityResult(currentParamName, currentParamType, srcCompareRecord, checkRecord, tempComparisonResult);
+
+                            if (pairSimilaritiesInSequences.containsKey(newSTPair)) {
+
+                                pairSimilaritiesInSequences.get(newSTPair).addSequenceSimilarityResult(newSimResult);
+
+                            } else {
+                                SequenceSimilarityResultVector newSeqSimilarity = new SequenceSimilarityResultVector();
+                                newSeqSimilarity.add(newSimResult);
+                                pairSimilaritiesInSequences.put(newSTPair, newSeqSimilarity);
+                            }
+                        }
+                    }
+                }
+
+            } else {
+
+                //start - next pairs --> next is connected with other uris?
+                Vector<String> initiaInstances = uriValuesToStartingUris.get(startingUri);
+                if (currentParamType.equals(ApiConstants.Type_URI)) {
+
+                    if (uriValuesToStartingUris.containsKey(value)) {
+
+                        if (initiaInstances != null && initiaInstances.size() > 0) {
+                            for (int mergeIndex = 0; mergeIndex < initiaInstances.size(); mergeIndex++) {
+                                if (uriValuesToStartingUris.get(value).contains(initiaInstances.get(mergeIndex)) == false) {
+                                    uriValuesToStartingUris.get(value).add(initiaInstances.get(mergeIndex));
+                                }
+                            }
+                        }
+                    } else {
+                        if (initiaInstances != null && initiaInstances.size() > 0) {
+                            uriValuesToStartingUris.put(value, initiaInstances);
+                        }
+                    }
+
+                    initiaInstances = uriValuesToStartingUris.get(value);
+
+                }
+
+                if (initiaInstances != null && initiaInstances.size() > 0) {
+                    for (int mergeIndex = 0; mergeIndex < initiaInstances.size(); mergeIndex++) {
+                        SourceInstancePair searchVal = new SourceInstancePair(sourceName, initiaInstances.get(mergeIndex));
+                        currentFileInfo.get(initiaInstances.get(mergeIndex)).addValueToSequence(currentSequence, currentParamName, value, lang);
+
+                        DataRecord checkRecord = new DataRecord(value, lang);
+
+                        Enumeration<String> filesEnum = inputFilesInfo.keys();
+                        while (filesEnum.hasMoreElements()) {
+                            String file = filesEnum.nextElement();
+
+                            Enumeration<String> uriEnum = inputFilesInfo.get(file).keys();
+                            while (uriEnum.hasMoreElements()) {
+                                String srcuri = uriEnum.nextElement();
+                                SequencesVector pairdata = inputFilesInfo.get(file).get(srcuri);
+
+                                SequenceData seqData = pairdata.getSequenceDataAtPosition(currentSequence.getPositionID());
+
+                                if (seqData == null) {
+                                    continue;
+                                }
+
+                                Vector<DataRecord> sourceVals = seqData.getValuesOfKey(currentParamName);
+                                if (sourceVals == null || sourceVals.size() == 0) {
+                                    continue;
+                                }
+
+                                if (canFastMethodBeApplied && sourceVals.contains(checkRecord) == false) {
+                                    continue;
+                                }
+
+                                DataRecord srcCompareRecord = new DataRecord("", "");
+
+                                Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord);
+                                if (tempComparisonResult > 0d) {
+                                    SourceInstancePair pair = new SourceInstancePair(file, srcuri);
+
+                                    SourceTargetPair newSTPair = new SourceTargetPair(pair, searchVal);
+                                    //int currentSequencePosition = currentSequence.getSequencePosition();
+                                    SequenceSimilarityResult newSimResult = new SequenceSimilarityResult(currentSequence.getPositionID(), seqData.getSchemaInfo().getMnemonic(), seqData.getSchemaInfo().getWeight());
+                                    newSimResult.setNewSimilarityResult(currentParamName, currentParamType, srcCompareRecord, checkRecord, tempComparisonResult);
+
+                                    //SimilarityTriplet newSimTriplet = new SimilarityTriplet(currentSequencePosition, currentStepPosition, tempComparisonResult);
+                                    if (pairSimilaritiesInSequences.containsKey(newSTPair)) {
+
+                                        pairSimilaritiesInSequences.get(newSTPair).addSequenceSimilarityResult(newSimResult);
+
+                                    } else {
+                                        SequenceSimilarityResultVector newSeqSimilarity = new SequenceSimilarityResultVector();
+                                        newSeqSimilarity.add(newSimResult);
+                                        pairSimilaritiesInSequences.put(newSTPair, newSeqSimilarity);
+                                    }
+                                }
+
+                            }
+
+                        }
+                    }
+                }
+            }
+
+        }
+
+    }
+
+    //<editor-fold defaultstate="collapsed" desc="Abandoned not necessarily working code">
+    /*
+    int DELETE_retrieveDataFrom_OWLIM_DB(
+            OnlineDatabase db,
+            Hashtable<String, Model> allRetrievedModels,
+            SourceDataHolder sourceData,
+            Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences) {
+
+        //Utilities
+        QueryBuilder qBuilder = new QueryBuilder(this.imClass);
+        OnlineDatabaseActions qSource = new OnlineDatabaseActions(this.imClass, db);
+
+        //find out not existing uris
+        Vector<String> checkSourceDataUrisExistenceInDB = sourceData.collectAllUriValuesOfInstancesAndSequences();
+        Vector<String> urisThatDoNotExistInTheDatabase = new Vector<String>();
+        try {
+            int ret = qSource.DELETE_findOutUrisNotExistingIntheDatabase(checkSourceDataUrisExistenceInDB, urisThatDoNotExistInTheDatabase);
+            if (ret != ApiConstants.IMAPISuccessCode) {
+                System.out.println("Error code returned while trying to filter out uri instances that do not exist.");
+                return ret;
+            }
+        } catch (IOException ex) {
+            System.out.println("Error occured while trying to filter out uri instances that do not exist.");
+            Utilities.handleException(ex);
+            return ApiConstants.IMAPIFailCode;
+        }
+
+        if (IMAPIClass.ExtentedMessagesEnabled) {
+            System.out.println("The following uris were not found in the database:\n " + urisThatDoNotExistInTheDatabase.toString().replace("[", "").replace("]", "").replace(",", "\n"));
         }
         
-        return returnVals;
+
+        //prepare queries actions starting
+        Hashtable<String, String> dbNs = db.getDbNamesapcesCopy();
+
+        //get available list of cidoc namepsaces and get another structure
+        //that will be filled with the subset of the above that is declared for this db
+        Vector<String> validCrmNs = this.imClass.qWeightsConfig.getValidCrmNamespaces();
+        Hashtable<String, String> validCrmNsUsed = new Hashtable<String, String>();
+
+        String queryPrefixes = "";
+
+        Vector<String> nKeys = new Vector<String>(dbNs.keySet());
+
+        for (int m = 0; m < nKeys.size(); m++) {
+            String keyStr = nKeys.get(m);
+            String fileNs = dbNs.get(keyStr);
+
+            queryPrefixes += "PREFIX " + keyStr + ": <" + fileNs + ">\r\n";
+            if (validCrmNs.contains(fileNs)) {
+                validCrmNsUsed.put(keyStr, fileNs);
+            }
+        }
+
+        queryPrefixes += "\r\n";
+
+        StringObject getAllInstances = new StringObject("");
+        StringObject countAllInstances = new StringObject("");
+        Vector<UserQueryConfiguration> qSequences = this.imClass.userConfig.getUserQueriesCopy();
+
+        //prepare the queries --> retrieve from model the class and predicate names
+        Model prepareQueriesModel = ModelFactory.createDefaultModel();
+        Enumeration<String> validCrmEnum = validCrmNsUsed.keys();
+        while (validCrmEnum.hasMoreElements()) {
+            Model loopModel = allRetrievedModels.get(validCrmNsUsed.get(validCrmEnum.nextElement()));
+            prepareQueriesModel = prepareQueriesModel.union(loopModel);
+        }
+
+        int ret = qBuilder.prepareQueries(validCrmNsUsed, prepareQueriesModel, this.imClass.userConfig.getComparisonMode(), db.getTargetDatabasePredicateDirectionUsage(), getAllInstances, countAllInstances, qSequences);
+        if (ret != ApiConstants.IMAPISuccessCode) {
+            return ret;
+        }
+        
+
+        //retrieve instances
+        if (getAllInstances.getString().length() > 0) {
+
+            ret = qSource.DELETE_retrieveSimilaritiesTo_Owlim_DB(queryPrefixes,
+                    getAllInstances.getString(),
+                    countAllInstances.getString(),
+                    qSequences,
+                    sourceData,
+                    urisThatDoNotExistInTheDatabase,
+                    pairSimilaritiesInSequences);
+
+            if (ret != ApiConstants.IMAPISuccessCode) {
+                return ret;
+            }
+        }
+        
+
+        return ApiConstants.IMAPISuccessCode;
     }
-    
-    
+    */
+    //</editor-fold>
 }

@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +13,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
 import java.io.File;
@@ -41,183 +56,39 @@ class ApiConfigClass {
 
     private final String XPathforSupportedOnlineDbs = "/Root/SupportedDatabases/OnlineDatabase";
     
-    
+    private final String OnlineDbAttributeNameForDBType = "dbType";
     private final String OnlineDbAttributeNameForId = "sourceid";
     private final String OnlineDbElementNameForName = "Name";
+    private final String OnlineDbElementNameForIdPredicateUri = "IdPredicateUri";
     private final String OnlineDbElementNameForSparqlEndpoint = "SparqlEndpoint";
     private final String OnlineDbSubPathForNamespaces = "QueryNamespaces/Namespace";
     private final String OnlineDbNamespaceAttributeNameForPrefix = "prefix";
     private final String OnlineDbAttributeForPredicateDirection = "PredicateDirection";
 
-    //private final String temp_XPathforPredicateBaseQueries = "/Root/XXXSearchModeXXX/PredicateQueries/Predicate";
-    //private final String temp_XPathforGetAllInstancesBaseQuery = "/Root/XXXSearchModeXXX/GetAllInstancesBaseQuery";
- 
-    //private final String TargetNamespaceAttributeName = "QueryFormatNamespace";
-    //private final String PredicateIdAttributeName = "id";
-    //private final String PredicateSubjectClassElementName = "SubjectClass";
-    //private final String PredicateObjectClassElementName = "ObjectClass";	
-    //private final String PredicateDirectPredicateElementName = "DirectPredicate";
-    //private final String PredicateInversePredicateElementName = "InversePredicate";
-    //private final String PredicateSPARQLQueryElementName = "SPARQLQUERY"; 
-
-    //private final String XPathforSourceInputFiles = "/Root/SourceInputFiles/File";
-    //private final String XPathforTargetInputFiles = "/Root/Comparisontarget[@selectedTarget='TargetFiles']/TargetFiles/File";
-    //private final String XPathforTargetOnLineDBName ="/Root/Comparisontarget[@selectedTarget='OnlineDatabase']/OnlineDatabase/Name";
-    //private final String XPathforTargetOnLineDBSparqlEndpoint ="/Root/Comparisontarget[@selectedTarget='OnlineDatabase']/OnlineDatabase/SparqlEndpoint";
-    //private final String XPathforTargetOnLineDBOutputFormat ="/Root/Comparisontarget[@selectedTarget='OnlineDatabase']/OnlineDatabase/OutputFormat";
-    //private String SearchMode = "";
     private String targetOnlineDBName = "";
     private String targetOnlineDBSparqlEndpointURL = "";
     private String targetOnlineDBOutputFormat = "";
-    //private Vector<String> sourceInputFiles = new Vector<String>();
-    //private Vector<String> targetInputFiles = new Vector<String>();
-
+    
     
     private Vector<OnlineDatabase> validDatabases = new Vector<OnlineDatabase>();
-    //private Hashtable<String,InitialPredicateClass> predicates = new Hashtable<String,InitialPredicateClass>();
-    //private Hashtable<String,String> getAllInstancesBaseQueriesPerNamespace = new Hashtable<String,String>();
-
     
-    /*
-    public InitialPredicateClass getPredicateClassById(String predicateId){
-        if(this.predicates.containsKey(predicateId)){
-            
-            return this.predicates.get(predicateId);
-        }
-        return null;
-    }
     
-    String GetAllInstancesBaseQuery(String namespaceKey) {
-        if(this.getAllInstancesBaseQueriesPerNamespace.containsKey(namespaceKey)){
-            return this.getAllInstancesBaseQueriesPerNamespace.get(namespaceKey);
-        }
-        else{
-            if(IMAPIClass.SystemOutWarningsEnabled){
-                System.out.println("Could Not find GetAllInstancesBaseQuery for namespace: "+namespaceKey+". Returning GetAllInstancesBaseQuery for " +ApiConstants.defaultCidocCrmNamespace );
-            }
-            return this.getAllInstancesBaseQueriesPerNamespace.get(ApiConstants.defaultCidocCrmNamespace);            
-        }
+    OnlineDatabase getOnlineDb(ApiConstants.TargetSourceChoice sourceChoice){
         
+        OnlineDatabase db = null;
+        for(int k=0; k< this.validDatabases.size(); k++){
+            if(validDatabases.get(k).getDBChoice() == sourceChoice){
+                db = validDatabases.get(k);
+                break;
+            }                    
+        }
+        return db;
     }
-    */
     
     Vector<OnlineDatabase> getSupportedDatabases(){
         return this.validDatabases;
     }
     
-    static void printSampleConfigurationFile() {
-        System.out.println("Printing Sample Configuration XML file");
-        System.out.println("------------------------------------------------------------\n\n");
-        System.out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-"<Root>\n" +
-"    \n" +
-"    <ValidCidocNamespaces>\n" +
-"        <Namespace>http://www.cidoc-crm.org/cidoc-crm/</Namespace>\n" +
-"        <Namespace>http://erlangen-crm.org/current/</Namespace>\n" +
-"        <Namespace>http://erlangen-crm.org/140220/</Namespace>\n" +
-"        <!--<Namespace>http://erlangen-crm.org/120111/</Namespace>-->\n" +
-"        <Namespace>http://purl.org/NET/crm-owl#</Namespace>\n" +
-"    </ValidCidocNamespaces>\n" +
-"    <NamespaceExtensions TargetNamespaseReplaceMent=\"###CIDOCNAMESPACE###\">\n" +
-"        <![CDATA[ \n" +
-"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>        \n" +
-"<rdf:RDF\n" +
-"    \n" +
-"    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
-"    xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n" +
-"    xmlns:skos=\"http://www.w3.org/2004/02/skos/core#\"    \n" +
-"    xml:base=\"###CIDOCNAMESPACE###\">\n" +
-"        <rdf:Property rdf:about=\"P81a_end_of_the_begin\">\n" +
-"	<rdfs:label xml:lang=\"en\">end of the begin</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"el\">τέλος της αρχής</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"de\">Ende des Anfangs</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"fr\">fin du début</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"ru\">конец начала</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"pt\">fim do início</rdfs:label>\n" +
-"	<rdfs:comment>This is defined as the first boundary of the property P81</rdfs:comment>\n" +
-"	<rdfs:domain rdf:resource=\"E52_Time-Span\"/>\n" +
-"	<rdfs:range rdf:resource=\"http://www.w3.org/2001/XMLSchema#dateTime\"/>\n" +
-"	<rdfs:subPropertyOf rdf:resource=\"P81_ongoing_throughout\"/>	\n" +
-"</rdf:Property>\n" +
-"<rdf:Property rdf:about=\"P81b_begin_of_the_end\">\n" +
-"	<rdfs:label xml:lang=\"en\">begin of the end</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"fr\">début de la fin</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"el\">αρχή του τέλους</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"de\">Anfang vom Ende</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"ru\">начать в конце</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"pt\">começar do fim</rdfs:label>\n" +
-"	<rdfs:comment>This is defined as the second boundary of the property P81</rdfs:comment>\n" +
-"	<rdfs:domain rdf:resource=\"E52_Time-Span\"/>\n" +
-"	<rdfs:range rdf:resource=\"http://www.w3.org/2001/XMLSchema#dateTime\"/>\n" +
-"	<rdfs:subPropertyOf rdf:resource=\"P81_ongoing_throughout\"/>	\n" +
-"</rdf:Property>\n" +
-"<rdf:Property rdf:about=\"P82a_begin_of_the_begin\">\n" +
-"	<rdfs:label xml:lang=\"en\">begin of the begin</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"fr\">début du début</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"el\">αρχή της αρχής</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"de\">Anfang des Anfangs</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"ru\">начать с начала</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"pt\">começar do início</rdfs:label>\n" +
-"	<rdfs:comment>This is defined as the first boundary of the property P82</rdfs:comment>\n" +
-"	<rdfs:domain rdf:resource=\"E52_Time-Span\"/>\n" +
-"	<rdfs:range rdf:resource=\"http://www.w3.org/2001/XMLSchema#dateTime\"/>\n" +
-"	<rdfs:subPropertyOf rdf:resource=\"P82_at_some_time_within\"/>	\n" +
-"</rdf:Property>\n" +
-"<rdf:Property rdf:about=\"P82b_end_of_the_end\">\n" +
-"	<rdfs:label xml:lang=\"en\">end of the end</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"fr\">fin de la fin</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"el\">τέλος του τέλους</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"de\">Ende vom Ende</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"ru\">конец конец</rdfs:label>\n" +
-"	<rdfs:label xml:lang=\"pt\">fim do fim</rdfs:label>\n" +
-"	<rdfs:comment>This is defined as the second boundary of the property P82</rdfs:comment>\n" +
-"	<rdfs:domain rdf:resource=\"E52_Time-Span\"/>\n" +
-"	<rdfs:range rdf:resource=\"http://www.w3.org/2001/XMLSchema#dateTime\"/>\n" +
-"	<rdfs:subPropertyOf rdf:resource=\"P82_at_some_time_within\"/>	\n" +
-"</rdf:Property>\n" +
-"\n" +
-"\n" +
-"        </rdf:RDF>\n" +
-"        ]]>\n" +
-"    </NamespaceExtensions>\n" +
-"\n" +
-"    <SupportedDatabases>\n" +
-"        <OnlineDatabase sourceid=\"BRITISH_MUSEUM_COLLECTION\" PredicateDirection=\"direct\">\n" +
-"            <Name>British Museum Semantic Web Collection Online</Name>\n" +
-"            <SparqlEndpoint>http://collection.britishmuseum.org/sparql</SparqlEndpoint>            \n" +
-"            <QueryNamespaces>\n" +
-"                <Namespace prefix=\"ecrm\">http://erlangen-crm.org/current/</Namespace>\n" +
-"                <Namespace prefix=\"rdfs\">http://www.w3.org/2000/01/rdf-schema#</Namespace>\n" +
-"                <Namespace prefix=\"rdf\">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     \n" +
-"                <Namespace prefix=\"skos\">http://www.w3.org/2004/02/skos/core#</Namespace>                \n" +
-"                <Namespace prefix=\"bmo\">http://collection.britishmuseum.org/id/ontology/</Namespace>\n" +
-"            </QueryNamespaces>\n" +
-"        </OnlineDatabase>\n" +
-"        \n" +
-"        <OnlineDatabase sourceid=\"CLAROS\" PredicateDirection=\"both\">\n" +
-"            <Name>CLAROS</Name>\n" +
-"            <SparqlEndpoint>http://data.clarosnet.org/sparql/</SparqlEndpoint>            \n" +
-"            <QueryNamespaces>\n" +
-"                <Namespace prefix=\"crm\">http://purl.org/NET/crm-owl#</Namespace>\n" +
-"                <Namespace prefix=\"rdfs\">http://www.w3.org/2000/01/rdf-schema#</Namespace>\n" +
-"                <Namespace prefix=\"rdf\">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     \n" +
-"                <Namespace prefix=\"skos\">http://www.w3.org/2004/02/skos/core#</Namespace>                                              \n" +
-"            </QueryNamespaces>\n" +
-"        </OnlineDatabase>\n" +
-"    </SupportedDatabases>\n" +
-"    \n" +
-"</Root>");
-    }
-
-    /*
-    private String getXPathforAllInstances() {
-        return this.temp_XPathforGetAllInstancesBaseQuery.replace("XXXSearchModeXXX", this.SearchMode);
-    }
-    
-    private String getXPathforPredicates() {
-        return this.temp_XPathforPredicateBaseQueries.replace("XXXSearchModeXXX", this.SearchMode);
-    }
-    */
     private int errCode = ApiConstants.IMAPISuccessCode;
 
     int getErrorCode() {
@@ -229,14 +100,6 @@ class ApiConfigClass {
         return this.errorMessage;
     }
 
-    /*
-    String getPredicateBaseQuery(String pid,String ns){
-        if(this.predicates.containsKey(pid)){
-            return this.predicates.get(pid).getSparqlQuery(ns);
-        }
-        return "";
-    }
-    */
     private void setErrorMessage(int errorCode, String errorMsg) {
         this.errCode = errorCode;
         this.errorMessage = errorMsg;
@@ -260,35 +123,6 @@ class ApiConfigClass {
             
             Document document = builder.parse(ApiConfigClass.class.getResourceAsStream("/imapi/Configuration.xml"));
             XPath xpath = XPathFactory.newInstance().newXPath();
-
-            /*//get comparison mode
-             if (this.XPathforPerformingFileComparison != null) {
-             //get database connection string
-             Node node = (Node) xpath.evaluate(this.XPathforPerformingFileComparison, document, XPathConstants.NODE);
-             if (node != null) {
-
-             String performFilecomparisonStr = node.getTextContent();
-             performFilecomparisonStr = performFilecomparisonStr == null ? "" : performFilecomparisonStr.trim().toLowerCase();
-             if (performFilecomparisonStr.equals("yes") || performFilecomparisonStr.equals("true")) {
-             this.fileComparison = true;
-             } else {
-             this.fileComparison = false;
-             }
-             }
-             }
-
-             //get search mode
-             if (this.XPathforSearchMode != null) {
-             //get database connection string
-             Node node = (Node) xpath.evaluate(this.XPathforSearchMode, document, XPathConstants.NODE);
-             if (node != null) {
-
-             this.SearchMode = node.getTextContent();
-             this.SearchMode = this.SearchMode == null ? "" : this.SearchMode.trim();
-             }
-             }
-             */
-            
             
             ApiConstants.TargetSourceChoice[] validTargetSourceChoices = ApiConstants.TargetSourceChoice.values();
             ApiConstants.PredicateDirectionUsage[] validPredicateDirections = ApiConstants.PredicateDirectionUsage.values();
@@ -301,7 +135,7 @@ class ApiConfigClass {
                     
                     for (int i = 0; i < howmanyNodes; i++) {
 
-                        String dbName="", dbSparqlEndpoint="", dbid="", dbPredDirectionSTr;
+                        String dbName="", dbSparqlEndpoint="", dbid="", dbPredDirectionSTr="", dbTypeStr ="", idPredicateUri ="";
                         ApiConstants.TargetSourceChoice sourceChoice = ApiConstants.TargetSourceChoice.FILE_COMPARISON;
                         ApiConstants.PredicateDirectionUsage predicatesDirection = ApiConstants.PredicateDirectionUsage.BOTH;
                         Hashtable<String,String> namespaces = new Hashtable<String,String>();
@@ -341,12 +175,26 @@ class ApiConfigClass {
                                     }
                                 }                        
                             } 
+                            
+                            Node dbTypeAttributeNode = xNode.getAttributes().getNamedItem(this.OnlineDbAttributeNameForDBType);
+                            if(dbTypeAttributeNode!=null){
+                                String tempStr = dbTypeAttributeNode.getTextContent();
+                                if(tempStr!=null){
+                                    dbTypeStr = tempStr.trim().toLowerCase();
+                                }
+                            }
                         }
                         
                         //getDbName
                         Node xNodeName = (Node) xpath.evaluate("./"+this.OnlineDbElementNameForName, xNode, XPathConstants.NODE);
                         if(xNodeName!=null){
                             dbName = xNodeName.getTextContent();
+                        }
+                        
+                        //getIdPredicate
+                        Node xIdPredUri = (Node) xpath.evaluate("./"+this.OnlineDbElementNameForIdPredicateUri, xNode, XPathConstants.NODE);
+                        if(xIdPredUri!=null){
+                            idPredicateUri = xIdPredUri.getTextContent().trim();
                         }
                         
                         //getSPARQL endpoint
@@ -413,7 +261,7 @@ class ApiConfigClass {
                              return;
                         }
                         */
-                        OnlineDatabase newDb = new OnlineDatabase(sourceChoice, dbName, dbSparqlEndpoint, namespaces,predicatesDirection);
+                        OnlineDatabase newDb = new OnlineDatabase(sourceChoice, dbName, dbTypeStr, idPredicateUri, dbSparqlEndpoint, namespaces,predicatesDirection);
                         this.validDatabases.add(newDb);
                     }
                 }
@@ -425,33 +273,22 @@ class ApiConfigClass {
             
             
         } catch (ParserConfigurationException e) {
-            ApiConfigClass.printSampleConfigurationFile();
             String tempMsg = "ParserConfigurationException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);            
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (XPathExpressionException e) {
-            ApiConfigClass.printSampleConfigurationFile();
             String tempMsg = "XPathExpressionException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);            
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (SAXException e) {
-            ApiConfigClass.printSampleConfigurationFile();
             String tempMsg = "SAXException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);
-            e.printStackTrace();
+            Utilities.handleException(e);
         } catch (IOException e) {
-            ApiConfigClass.printSampleConfigurationFile();
             String tempMsg = "IOException occured:\r\n" + e.getMessage();
             this.setErrorMessage(ApiConstants.IMAPIFailCode, tempMsg);
-            e.printStackTrace();
+            Utilities.handleException(e);
         }
 
     }
-
-    //Values that will be read from XML
-    //private boolean fileComparison = false;
-    //private String SearchMode = "";
-    //private Vector<String> sourceInputFiles = new Vector<String>();
-    //private Vector<WeightedPredicate> predicates = new Vector<WeightedPredicate>();
-    //private String InstancesQuery = "";
 }

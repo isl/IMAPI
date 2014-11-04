@@ -1,38 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Copyright 2014 Institute of Computer Science,
-               Foundation for Research and Technology - Hellas.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-=============================================================================
-Contact: 
-=============================================================================
-Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
-    Tel: +30-2810-391632
-    Fax: +30-2810-391638
- E-mail: isl@ics.forth.gr
-WebSite: http://www.ics.forth.gr/isl/
-
-=============================================================================
-Authors: 
-=============================================================================
-Elias Tzortzakakis <tzortzak@ics.forth.gr>
-
+   Copyright 2014 Institute of Computer Science,
+                  Foundation for Research and Technology - Hellas.
+  
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+  
+        http://www.apache.org/licenses/LICENSE-2.0
+  
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+   =============================================================================
+   Contact: 
+   =============================================================================
+   Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+       Tel: +30-2810-391632
+       Fax: +30-2810-391638
+    E-mail: isl@ics.forth.gr
+   WebSite: http://www.ics.forth.gr/isl/
+   
+   =============================================================================
+   Authors: 
+   =============================================================================
+   Elias Tzortzakakis <tzortzak@ics.forth.gr>
 -->
 <Root>
     <SupportedDatabases>
-        <OnlineDatabase sourceid="BRITISH_MUSEUM_COLLECTION" PredicateDirection="direct">
+        <OnlineDatabase sourceid="BRITISH_MUSEUM_COLLECTION" PredicateDirection="direct" dbType="owlim">
             <Name>British Museum Semantic Web Collection Online</Name>
             <SparqlEndpoint>http://collection.britishmuseum.org/sparql</SparqlEndpoint>            
             <QueryNamespaces>
@@ -41,7 +40,9 @@ Elias Tzortzakakis <tzortzak@ics.forth.gr>
                 <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
                 <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>                
                 <Namespace prefix="bmo">http://collection.britishmuseum.org/id/ontology/</Namespace>
+                <!--<Namespace prefix="ent"></Namespace>-->
             </QueryNamespaces>
+            <IdPredicateUri>http://www.ontotext.com/owlim/entity#id</IdPredicateUri>
         </OnlineDatabase>
         <!--
         <OnlineDatabase sourceid="CULTURA_ITALIA">

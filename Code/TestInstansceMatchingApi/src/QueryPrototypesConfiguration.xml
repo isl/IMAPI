@@ -1,36 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Copyright 2014 Institute of Computer Science,
-               Foundation for Research and Technology - Hellas.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-=============================================================================
-Contact: 
-=============================================================================
-Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
-    Tel: +30-2810-391632
-    Fax: +30-2810-391638
- E-mail: isl@ics.forth.gr
-WebSite: http://www.ics.forth.gr/isl/
-
-=============================================================================
-Authors: 
-=============================================================================
-Elias Tzortzakakis <tzortzak@ics.forth.gr>
-
+   Copyright 2014 Institute of Computer Science,
+                  Foundation for Research and Technology - Hellas.
+  
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+  
+        http://www.apache.org/licenses/LICENSE-2.0
+  
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+   =============================================================================
+   Contact: 
+   =============================================================================
+   Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+       Tel: +30-2810-391632
+       Fax: +30-2810-391638
+    E-mail: isl@ics.forth.gr
+   WebSite: http://www.ics.forth.gr/isl/
+   
+   =============================================================================
+   Authors: 
+   =============================================================================
+   Elias Tzortzakakis <tzortzak@ics.forth.gr>
 -->
 <Root>        
+    <ApiConfigs>
+        <QueryLimitSize>10000</QueryLimitSize>
+        <QueryFilteringInstancesCount>1000</QueryFilteringInstancesCount>
+        <QueryFilteringValuesCount>10</QueryFilteringValuesCount>
+        <!-- not implemented but might be usefull 
+        - StopOnFirstResult
+        -->
+    </ApiConfigs>
     <ValidCidocNamespaces>
         <Namespace>http://www.cidoc-crm.org/cidoc-crm/</Namespace>
         <Namespace>http://erlangen-crm.org/current/</Namespace>
@@ -39,6 +46,32 @@ Elias Tzortzakakis <tzortzak@ics.forth.gr>
         <Namespace>http://purl.org/NET/crm-owl#</Namespace>
         <!--http://erlangen-crm.org/091217/</Namespace>-->
     </ValidCidocNamespaces>
+    <IncludeNamespaces>
+        <Namespace>http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>
+        <Namespace>http://www.w3.org/2000/01/rdf-schema#</Namespace>
+        <Namespace>http://www.w3.org/2002/07/owl#</Namespace>
+        <Namespace>http://www.w3.org/2004/02/skos/core#</Namespace>
+        <!--<Namespace>http://xmlns.com/foaf/0.1/</Namespace>
+        <Namespace>http://www.geonames.org/ontology#</Namespace>-->
+        
+        <!-- these two block the program when jena tries to retrieve them 
+        <Namespace>http://creativecommons.org/ns#</Namespace>
+        <Namespace>http://www.w3.org/2006/03/wn/wn20/instances/</Namespace>
+        the following simply raise errors when jena tries to retrieves them
+        <Namespace>http://www.w3.org/2001/XMLSchema#</Namespace>
+        <Namespace>http://www.owl-ontologies.com/generations.owl#</Namespace>
+        <Namespace>http://psi.oasis-open.org/iso/639/#</Namespace>
+        <Namespace>http://xmlns.com/wot/0.1/</Namespace>
+        <Namespace>http://sws.geonames.org/</Namespace>
+        <Namespace>http://data.nytimes.com/</Namespace>
+        <Namespace>http://umbel.org/umbel#</Namespace>
+        <Namespace>http://mpii.de/yago/resource/</Namespace>
+        <Namespace>http://www.ontotext.com/</Namespace>
+        <Namespace>http://www.ontotext.com/owlim/</Namespace>
+        <Namespace>http://factforge.net/</Namespace>
+        <Namespace>http://www.w3.org/2003/01/geo/wgs84_pos#</Namespace>
+        -->
+    </IncludeNamespaces>
     <NamespaceExtensions TargetNamespaseReplaceMent="###CIDOCNAMESPACE###">
         <!-- 
         xmlns:bmo="http://collection.britishmuseum.org/id/ontology/"
@@ -56,12 +89,83 @@ Elias Tzortzakakis <tzortzak@ics.forth.gr>
         <![CDATA[ 
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>        
 <rdf:RDF
-    
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
     xmlns:skos="http://www.w3.org/2004/02/skos/core#"    
     xml:base="###CIDOCNAMESPACE###">
     
+
+
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_commemorates">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P67_refers_to"/>
+                <rdfs:label>commemorates</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_currency">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>currency</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_escapement">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>escapement</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_gender">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>gender</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_has_main_representation">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P138i_has_representation"/>
+                <rdfs:domain rdf:resource="###CIDOCNAMESPACE###E22_Man-Made_Object"/>
+                <rdfs:range rdf:resource="###CIDOCNAMESPACE###E38_Image"/>
+                <rdfs:label>has main representation</rdfs:label>
+                <rdfs:comment>This is to identifier the primary representation an object may have</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_inscription_type">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>inscription type</rdfs:label>
+                <rdfs:comment>This should be used with the thesauri/inscription thesauri</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_inscription_subject">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>inscription subject</rdfs:label>
+                <rdfs:comment>This should be used with the id/thesauri/inscription-subject thesaurus</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_inscription_script">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>inscription script</rdfs:label>
+                <rdfs:comment>This is a sub-property of crm:P2_has_type, This predicate is used to identify the type of script in which an inscription is written (eg Roman, Hieroglyphic, etc)</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_object_type">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>object type</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_nationality">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P107i_is_current_or_former_member_of"/>
+                <rdfs:domain rdf:resource="###CIDOCNAMESPACE###E39_Actor"/>
+                <rdfs:range rdf:resource="###CIDOCNAMESPACE###E74_Group"/>
+                <rdfs:label>nationality</rdfs:label>
+                <rdfs:comment>This is the nationality of an E39 Actor.  It is a sub-property of P107i (is current or former member of) - thus the Nation is modelled as a group (E74)</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_likelihood">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>likelihood</rdfs:label>
+                <rdfs:comment>BM Likelihood</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_profession">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P107i_is_current_or_former_member_of"/>
+                <rdfs:domain rdf:resource="###CIDOCNAMESPACE###E39_Actor"/>
+                <rdfs:range rdf:resource="###CIDOCNAMESPACE###E74_Group"/>
+                <rdfs:label>profession</rdfs:label>
+                <rdfs:comment>This is the profession of an E39 Actor.  It is a sub-property of P107i (is current or former member of) - thus the profession is modelled as a group (E74)</rdfs:comment>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_ware">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>ware</rdfs:label>
+        </owl:ObjectProperty>
+        <owl:ObjectProperty rdf:about="http://collection.britishmuseum.org/id/ontology/PX_type_series">
+                <rdfs:subPropertyOf rdf:resource="###CIDOCNAMESPACE###P2_has_type"/>
+                <rdfs:label>type series</rdfs:label>
+        </owl:ObjectProperty>
 
         <rdf:Property rdf:about="P81a_end_of_the_begin">
 	<rdfs:label xml:lang="en">end of the begin</rdfs:label>
@@ -116,276 +220,279 @@ Elias Tzortzakakis <tzortzak@ics.forth.gr>
         </rdf:RDF>
         ]]>
     </NamespaceExtensions>
-    
+    <CountAllInstances>
+        <query>
+<![CDATA[
+SELECT (STR(COUNT(DISTINCT ?x)) as ?cnt)
+{
+    ?x a ###BaseClass### .
+}
+]]>
+        </query>
+    </CountAllInstances>
     <GetAllInstances>
-         <query lang="sparql">
+         <query dbType="default">
                     <![CDATA[                     
 SELECT DISTINCT ?resultInstaceUri 
 {
-    ?resultInstaceUri a ###BaseClass###.    
-    ###FILTERURISTATEMENT###
+    ?resultInstaceUri a ###BaseClass### .    
+    ###FILTER_VALUES_STATEMENT###
 }
 ORDER BY ?resultInstaceUri 
-                    ]]>
-            </query>
-    </GetAllInstances>
+    ]]>
+        </query>
+        <!--<query dbType="owlim">
+                    <![CDATA[                     
+SELECT DISTINCT ?resultInstanceId ?resultInstaceUri 
+{
+    ?resultInstaceUri a ###BaseClass### .    
+    ?resultInstaceUri ###IDPREDICATE### ?resultInstanceId .
+}
+ORDER BY ?resultInstanceId 
+    ]]>
+    
+        </query>-->
+    </GetAllInstances>    
+    
     <QuerySequencesConfiguration>
-        <QuerySequence mnemonic="literal">
+        
+        <!-- literal -->
+        <QuerySequence mnemonic="literal">            
             <QueryStep name="stepAliteral" datatype="literal">
-                <query lang="sparql">
-                   <![CDATA[ 
+                <query>
+<![CDATA[ 
                                        
-SELECT DISTINCT ?resultInstaceUri ?stepAliteral
+SELECT DISTINCT ?startingInstance ?stepAliteral
 {
-    ?resultInstaceUri a ###BaseClass### .
-    { ?resultInstaceUri rdfs:label ?stepAliteral . }
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    { ?startingInstance rdfs:label ?stepAliteral . }
     UNION
-    { ?resultInstaceUri rdf:value ?stepAliteral . }
+    { ?startingInstance rdf:value ?stepAliteral . }
     
 }
-ORDER BY ?resultInstaceUri ?stepAliteral
-
-                    ]]>
-                    </query>                
-            </QueryStep>
-        </QuerySequence>
-        <QuerySequence mnemonic="uri(a)">
-            <QueryStep name="stepAliteral" datatype="uri">
-                <query lang="sparql">
-                   <![CDATA[ 
-                                       
-SELECT DISTINCT ?resultInstaceUri ?stepAliteral
-{
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    ?stepAliteral ###UNSETPID:a### ?resultInstaceUri .                   
-    
-}
-ORDER BY ?resultInstaceUri ?stepAliteral
-
-                    ]]>
-                    </query>                
-            </QueryStep>
-        </QuerySequence>
-        <QuerySequence mnemonic="literal(a)">            
-            <QueryStep name="stepAliteral" datatype="literal">
-                <query lang="sparql">
-                   <![CDATA[ 
-                                       
-SELECT DISTINCT ?resultInstaceUri ?stepAliteral
-{
-    ?resultInstaceUri a ###BaseClass### .
-    ?stepAliteral ###UNSETPID:a### ?resultInstaceUri .                       
-    
-}
-ORDER BY ?resultInstaceUri ?stepAliteral
-
-                    ]]>
-                    </query>                
-            </QueryStep>
-        </QuerySequence>
-        <QuerySequence mnemonic="uri(a) -> literal">
-            <QueryStep name="stepAuri" datatype="uri">
-                <query lang="sparql">
-                    <![CDATA[ 
-                    
-SELECT DISTINCT ?resultInstaceUri ?stepAuri
-{
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    
-    ?stepAuri ###UNSETPID:a### ?resultInstaceUri .        
-    
-}
-ORDER BY ?resultInstaceUri ?stepAuri
-                    ]]>
+ORDER BY ?startingInstance ?stepAliteral
+]]>
                 </query>                
-            </QueryStep>
-            <QueryStep name="stepBliteral" datatype="literal">
-                    <query lang="sparql">
-                    <![CDATA[ 
-                    
-SELECT DISTINCT ?resultInstaceUri ?stepBliteral
-{
-    ?resultInstaceUri a ###BaseClass### .
-    #{		
-    #    ?resultInstaceUri rdfs:label ?stepBliteral .
-    #}
-    #UNION 
-    #{    
-        ?stepAuri ###UNSETPID:a### ?resultInstaceUri .           
-        { ?stepAuri rdfs:label ?stepBliteral . }
-        UNION
-        { ?stepAuri rdf:value ?stepBliteral . }
-    #}  	    
-}
-ORDER BY ?resultInstaceUri ?stepBliteral
-
-                    ]]>
-                    </query>                
             </QueryStep>
         </QuerySequence>
         
-        <QuerySequence mnemonic="uri(a1 | a1 -> a2) -> uri(b)">
-        <!--<QuerySequence mnemonic="uri(a1 | a1 -> a2) -> uri(b) -> uri(c) -> literal">-->
-            <QueryStep name="stepAuri" datatype="uri">
-                
-                <query lang="sparql">
-                    <![CDATA[ 
+        <!-- uri(a) -->
+        <QuerySequence mnemonic="uri(a)">
+            <QueryStep name="stepAUri" datatype="uri">
+                <query>
+<![CDATA[ 
 
-SELECT DISTINCT ?resultInstaceUri ?stepAuri
+SELECT DISTINCT ?startingInstance ?stepAUri
 {
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:a### ?stepAUri .
+}
+ORDER BY ?startingInstance ?stepAUri      
+]]>
+                </query>
+            </QueryStep>            
+        </QuerySequence>
+        
+        <!-- literal(a) -->
+        <QuerySequence mnemonic="literal(a)">            
+            <QueryStep name="stepAliteral" datatype="literal">
+                <query>
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance stepAliteral
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:a### ?stepAliteral .    
+}
+ORDER BY ?startingInstance ?stepAliteral
+]]>
+                </query>                
+            </QueryStep>
+        </QuerySequence>
+        
+        <!-- uri(a) -> literal -->
+        <QuerySequence mnemonic="uri(a) -> literal">
+            <QueryStep name="stepAUri" datatype="uri">
+                <query>
+<![CDATA[ 
+SELECT DISTINCT ?startingInstance ?stepAUri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:a### ?stepAUri .   
+}
+ORDER BY ?startingInstance ?stepAUri      
+
+]]>
+                </query>
+            </QueryStep>
+            
+            <QueryStep name="stepBliteral" datatype="literal">
+                <query>
+<![CDATA[ 
+                    
+SELECT DISTINCT ?startingInstance ?stepBliteral
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    { ?startingInstance rdfs:label ?stepBliteral . }
+    UNION
+    { ?startingInstance rdf:value ?stepBliteral . }   
+}
+ORDER BY ?startingInstance ?stepBliteral
+                ]]>
+                </query>                
+            </QueryStep>            
+        </QuerySequence>
+        
+        <!-- uri(a1 | a1 -> a2) -> uri(b) -->
+        <QuerySequence mnemonic="uri(a1 | a1 -> a2) -> uri(b)">
+        
+            <QueryStep name="stepAuri" datatype="uri">
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance ?stepAuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
     {
-        ?stepAuri ###UNSETPID:a1### ?resultInstaceUri .
+        ?startingInstance ###UNSETPID:a1### ?stepAuri .
     }
     UNION
     {
-            ?result1 ###UNSETPID:a1### ?resultInstaceUri .
-            ?result1 ###UNSETPID:a2### ?stepAuri .                       
-    }
+       ?startingInstance ###UNSETPID:a1###  ?intermediateResult .
+       ?intermediateResult ###UNSETPID:a2### ?stepAuri .                       
+    }     
 }
-ORDER BY ?resultInstaceUri ?stepAuri
-                        ]]>
-                </query>
+ORDER BY ?startingInstance ?stepAuri
+]]>
             </QueryStep>            
+            
             <QueryStep name="stepBuri" datatype="uri">
-                
-                <query lang="sparql">
-                    <![CDATA[ 
+<![CDATA[ 
 
-SELECT DISTINCT ?resultInstaceUri ?stepBuri
+SELECT DISTINCT ?startingInstance ?stepBuri
 {
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    {
-        {
-            ?stepAuri ###UNSETPID:a1### ?resultInstaceUri .
-        }
-        UNION
-        {
-                ?result1 ###UNSETPID:a1### ?resultInstaceUri .
-                ?result1 ###UNSETPID:a2### ?stepAuri .                
-        }
-    }
-    ?stepAuri ###UNSETPID:b### ?stepBuri .
-    
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:b### ?stepBuri .
 }
-ORDER BY ?resultInstaceUri ?stepBuri
-                        ]]>
-                </query>
-            </QueryStep>    
-            <!--<QueryStep name="stepCuri" datatype="uri">
-                
-                <query lang="sparql">
-                    <![CDATA[ 
-
-SELECT DISTINCT ?resultInstaceUri ?stepCuri
-{
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    {
-        {
-            ?stepAuri ###UNSETPID:a1### ?resultInstaceUri .
-        }
-        UNION
-        {
-                ?result1 ###UNSETPID:a1### ?resultInstaceUri .
-                ?result1 ###UNSETPID:a2### ?stepAuri .                
-        }
-    }
-    ?stepAuri ###UNSETPID:b### ?stepBuri .
-    ?stepBuri ###UNSETPID:c### ?stepCuri .
-    
-    
-}
-ORDER BY ?resultInstaceUri ?stepCuri
-                        ]]>
-                </query>
-            </QueryStep>    
-            <QueryStep name="stepDliteral" datatype="literal">                
-                <query lang="sparql">
-                    <![CDATA[ 
-
-SELECT DISTINCT ?resultInstaceUri ?stepDliteral
-{
-    ?resultInstaceUri a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    {
-        {
-            ?stepAuri ###UNSETPID:a1### ?resultInstaceUri .
-        }
-        UNION
-        {
-                ?result1 ###UNSETPID:a1### ?resultInstaceUri .
-                ?result1 ###UNSETPID:a2### ?stepAuri .                
-        }
-    }
-    ?stepAuri ###UNSETPID:b### ?stepBuri .
-    ?stepBuri ###UNSETPID:c### ?stepCuri .
-    ?stepCuri rdfs:label ?stepDliteral .
-    
-}
-ORDER BY ?resultInstaceUri ?stepDliteral
-                        ]]>
-                </query>
-            </QueryStep>         
-            -->       
+ORDER BY ?startingInstance ?stepBuri    
+]]>
+            </QueryStep>
         </QuerySequence>
+                
+        <!-- uri(a1 | a1 -> a2) -> uri(b) -> uri(c) -> literal -->
+        <QuerySequence mnemonic="uri(a1 | a1 -> a2) -> uri(b) -> uri(c) -> literal">
+            
+            <QueryStep name="stepAuri" datatype="uri">
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance ?stepAuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    {
+        ?startingInstance ###UNSETPID:a1### ?stepAuri .
+    }
+    UNION
+    {
+       ?startingInstance ###UNSETPID:a1###  ?intermediateResult .
+       ?intermediateResult ###UNSETPID:a2### ?stepAuri .                       
+    }     
+}
+ORDER BY ?startingInstance ?stepAuri
+]]>
+            </QueryStep>            
+
+            <QueryStep name="stepBuri" datatype="uri">
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance ?stepBuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:b### ?stepBuri .
+}
+ORDER BY ?startingInstance ?stepBuri    
+]]>
+            </QueryStep>
+    
+            <QueryStep name="stepCuri" datatype="uri">
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance ?stepCuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:c### ?stepCuri .
+}
+ORDER BY ?startingInstance ?stepCuri    
+]]>                    
+            </QueryStep>
+
+            <QueryStep name="stepDliteral" datatype="literal">                
+<![CDATA[ 
+
+SELECT DISTINCT ?startingInstance ?stepDliteral
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    { ?startingInstance rdfs:label ?stepDliteral . }
+    UNION
+    { ?startingInstance rdf:value ?stepDliteral . }   
+}
+ORDER BY ?startingInstance ?stepDliteral    
+]]>
+            </QueryStep>                    
+        </QuerySequence>
+        
         
         <QuerySequence mnemonic="uri(a) -> uri(b) -> timespan(c1 - c2)">
             <QueryStep name="stepAuri" datatype="uri">
-                <query lang="sparql">
-                    <![CDATA[ 
-SELECT DISTINCT  ?actor ?stepAuri
-WHERE 
-{
-    ?actor a ###BaseClass### .    
-    ###FILTERURISTATEMENT###
-    ?actor ###UNSETPID:a### ?stepAuri .    
-}
-ORDER BY  ?actor ?stepAuri     
+<![CDATA[ 
 
-            ]]>
-                </query> 
+SELECT DISTINCT ?startingInstance ?stepAuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:a### ?stepAuri .
+}
+ORDER BY ?startingInstance ?stepAuri    
+]]>
+
             </QueryStep>
             <QueryStep name="stepBuri" datatype="uri">
-                <query lang="sparql">
-                    <![CDATA[ 
-SELECT DISTINCT  ?actor ?stepBuri
-WHERE 
-{
-    ?actor a ###BaseClass### .
-    ###FILTERURISTATEMENT###
-    ?actor ###UNSETPID:a### ?stepAuri .
-    ?stepAuri ###UNSETPID:b### ?stepBuri .
-    
-}
-ORDER BY  ?actor ?stepBuri     
+                
+<![CDATA[ 
 
-            ]]>
-                </query> 
+SELECT DISTINCT ?startingInstance ?stepBuri
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    ?startingInstance ###UNSETPID:b### ?stepBuri .
+}
+ORDER BY ?startingInstance ?stepBuri    
+]]>
             </QueryStep>
+            
             <QueryStep name="stepCtimespan" datatype="timespan">
-                    <query lang="sparql">
-                    <![CDATA[ 
-SELECT DISTINCT  ?actor ( CONCAT(CONCAT(IF(bound(?beginParam), STR(?beginParam), ""), " - "), IF(bound(?endParam), STR(?endParam), "") ) AS ?stepCtimespan) 
-WHERE 
-{
-    ?actor a ###BaseClass### .
-    ?actor ###UNSETPID:a### ?stepAuri .
-    ?stepAuri ###UNSETPID:b### ?stepBuri .
-    OPTIONAL{ ?stepBuri ###UNSETPID:c1### ?beginParam . }
-    OPTIONAL{ ?stepBuri ###UNSETPID:c2### ?endParam . }
-    FILTER ( (!BOUND(?beginParam) && BOUND(?endParam) ) || (!BOUND(?endParam) && BOUND(?beginParam) ) ||  ?beginParam <= ?endParam) .                    
-  
-    
-}
-ORDER BY  ?actor ?stepCtimespan     
 
-            ]]>
-                    </query> 
+<![CDATA[ 
+
+SELECT DISTINCT  ?startingInstance ( CONCAT(CONCAT(IF(bound(?beginParam), STR(?beginParam), ""), " - "), IF(bound(?endParam), STR(?endParam), "") ) AS ?stepCtimespan) 
+{
+    ###FILTER_STARTING_URIS_STATEMENT###
+    ###FILTER_VALUES_STATEMENT###
+    OPTIONAL{ ?startingInstance ###UNSETPID:c1### ?beginParam . }
+    OPTIONAL{ ?startingInstance ###UNSETPID:c2### ?endParam . }
+    FILTER ( (!BOUND(?beginParam) && BOUND(?endParam) ) || (!BOUND(?endParam) && BOUND(?beginParam) ) ||  ?beginParam <= ?endParam) .                    
+}
+ORDER BY ?startingInstance ?stepCtimespan   
+]]>
             </QueryStep>
         </QuerySequence>
         

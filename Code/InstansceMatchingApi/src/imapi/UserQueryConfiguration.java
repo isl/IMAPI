@@ -1,5 +1,6 @@
 /*
- * Copyright 2014 Your Name <Elias Tzortzakakis at tzortzak@ics.forth.gr>.
+ * Copyright 2014 Institute of Computer Science,
+ *                Foundation for Research and Technology - Hellas.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * =============================================================================
+ * Contact: 
+ * =============================================================================
+ * Address: N. Plastira 100 Vassilika Vouton, GR-700 13 Heraklion, Crete, Greece
+ *     Tel: +30-2810-391632
+ *     Fax: +30-2810-391638
+ *  E-mail: isl@ics.forth.gr
+ * WebSite: http://www.ics.forth.gr/isl/
+ * 
+ * =============================================================================
+ * Authors: 
+ * =============================================================================
+ * Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ * 
  */
-
 package imapi;
 
-
-import imapi.QueryPrototypeSequence;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
@@ -27,15 +40,24 @@ import java.util.Vector;
  * @author tzortzak
  */
 class UserQueryConfiguration {
-    private String mnemonic ="";
-    private Double weight =0d;
-    private Hashtable<String,String> predicateChoices = new Hashtable<String,String>();
     
-    Double getWeight(){
+    private String mnemonic ="";
+    private String parameterizedMnemonic ="";
+    private Double weight =0d;
+    private int positionID;
+    private Hashtable<String,String> predicateChoices = new Hashtable<String,String>();
+    private QueryPrototypeSequence prototypeSequence;   
+    
+    private Hashtable<String,String> allQueryStepParameters = new Hashtable<String,String>();
+    private String[] sortedParameterNames;
+    private String[] sortedParameterTypes;
+    private String[] sortedQueries;
+    
+    public Double getWeight(){
         return this.weight;
     }
     
-    String getMnemonic(){
+    public String getMnemonic(){
         if(this.parameterizedMnemonic.length()>0){
             return "\""+this.parameterizedMnemonic +"\"";
         }
@@ -43,9 +65,6 @@ class UserQueryConfiguration {
             return this.mnemonic;
         }
     }
-    
-    private String parameterizedMnemonic ="";
-    
     
     private void setParameterizedMnemonic(){
         String str = this.mnemonic;
@@ -114,21 +133,15 @@ class UserQueryConfiguration {
         this.parameterizedMnemonic = str;
         
     }
-    private int positionID;
     
-    int getPositionID(){
+    
+    public int getPositionID(){
         return this.positionID;
     }
     
-    private QueryPrototypeSequence prototypeSequence;
     
     
-    private Hashtable<String,String> allQueryStepParameters = new Hashtable<String,String>();
-    private String[] sortedParameterNames;
-    private String[] sortedParameterTypes;
-    private String[] sortedQueries;
-    
-    Hashtable<String,String> getAllQueryStepParameters(){
+    public Hashtable<String,String> getAllQueryStepParameters(){
         Hashtable<String,String> returnVal = new Hashtable<String,String>();
         Enumeration<String> paramEnum = this.allQueryStepParameters.keys();
         while(paramEnum.hasMoreElements()){
@@ -141,7 +154,7 @@ class UserQueryConfiguration {
         return returnVal;
     }
     
-    String[] getSortedParameterNamesCopy(){
+    public String[] getSortedParameterNamesCopy(){
         String[] returnVal = new String[this.sortedParameterNames.length];
         
         for(int i=0; i< this.sortedParameterNames.length; i++){

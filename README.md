@@ -32,4 +32,4 @@
  IMAPI - Instance Matching Api
 =============
 
-Instance Matching tool is a java api developed in java 7 used in order to retrieve similarities of instance pairs, on user specified fields among “Source Data” and “Target Data”. Source Data are always a set of rdf files while Target Data may be another set of rdf files or an online Database. Currently the only online databases supported are the British Museum Collection Database [http://collection.britishmuseum.org/sparql] and CLAROS database [http://data.clarosnet.org/sparql/].
+Instance Matching tool is a java api developed in java 7 used in order to retrieve similarities of instance pairs, on user specified fields among “Source Data” and “Target Data”. Source Data are always a set of rdf files while Target Data may be another set of rdf files or an online Database. Currently the only online databases supported are the [British Museum Collection Database] (http://collection.britishmuseum.org/sparql) and [CLAROS database] (http://data.clarosnet.org/sparql/).
