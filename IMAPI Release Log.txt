@@ -1,0 +1,27 @@
+
+         INSTITUTE OF COMPUTER SCIENCE - FORTH
+
+            Information Systems Laboratory
+
+--------------------------------------------------------------------
+
+             IMAPI - Instance Matching Api
+
+--------------------------------------------------------------------
+
+
+IMAPI v2.0 new features (last development date 04 Nov. 2014):
+====================================================================
+
+- Changed the workflow of queries so that more depth in queries is 
+  supported. This change had a positive impact to stability, scalability 
+  and memory occupied but had a negative impact in time required to 
+  calculate the results.
+
+- Included british museum extentions to crm in the list of available 
+  predicates (e.g. PX_gender, PX_nationality etc.)
+
+- Created a structure that in order to keep the results returned by 
+  the comparison, so that they can be used by any application that uses
+  the api or displayed in any other user defined way. Previous version 
+  just printed out the results in a standard non-customizable format.
