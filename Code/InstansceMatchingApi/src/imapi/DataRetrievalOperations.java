@@ -31,6 +31,20 @@
  */
 package imapi;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Vector;
+
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.query.Query;
@@ -41,25 +55,7 @@ import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.util.FileManager;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -265,6 +261,64 @@ class DataRetrievalOperations {
                 }
                 break;
             }
+            
+            
+            /*
+             case Virtual Machine {
+                
+             }
+             */
+            
+            case BM_BIOGRAPHY_COLLECTION : { 
+                OnlineDatabase db = this.imClass.conf.getOnlineDb(targetChoice);
+                if (db == null) {
+                    break;
+                }
+                Hashtable<String, String> dbNamepaces = db.getDbNamesapcesCopy();
+
+                Enumeration<String> nsEnum = dbNamepaces.keys();
+                while (nsEnum.hasMoreElements()) {
+                    String keyStr = nsEnum.nextElement();
+                    String namespace = dbNamepaces.get(keyStr);
+
+                    if (includeNamespaces.contains(namespace) == false) {
+                        if (finallySkippedNamespaces.contains(namespace) == false) {
+                            finallySkippedNamespaces.add(namespace);
+                        }
+                        continue;
+                    }
+
+                    if (allDeclaredModels.containsKey(namespace)) {
+                        continue;
+                    }
+
+                    if (checkNameSpaceUriInternetAvailability(namespace) == false) {
+
+                        continue;
+                    }
+
+                    Model loopModel = ModelFactory.createDefaultModel();
+                    boolean exCaught = false;
+                    try {
+                        System.out.println("Retrieving model of namespace " + namespace);
+                        loopModel = loopModel.read(namespace);
+                    } catch (Exception ex) {
+                        System.out.println("Exception caught while retrieving schema info for namespace: " + namespace);
+                        System.out.println(ex.getMessage());
+                        exCaught = true;
+                    }
+                    if (exCaught) {
+                        continue;
+                    }
+
+                    allDeclaredModels.put(namespace, loopModel);
+
+                }
+
+                break;
+            }
+            
+            
             /*
              case BRITISH_MUSEUM_COLLECTION:{
                 
@@ -340,7 +394,12 @@ class DataRetrievalOperations {
             String rdfStatements = this.imClass.qWeightsConfig.getCrmExtentionsString(next);
             Model loopModel = ModelFactory.createDefaultModel();
 
-            loopModel.read(new java.io.StringReader(rdfStatements), next);
+            try {
+				loopModel.read(new java.io.StringReader(rdfStatements), next);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
             crmModel = crmModel.union(loopModel);
 
@@ -666,7 +725,7 @@ class DataRetrievalOperations {
                 if (IMAPIClass.DEBUG) {
                     System.out.println("DEBUG: Just before instances retrieval with Offset " + firstLevelLoopOFFSET);
                 }
-
+//Edw ka8ysterei
                 Query instancesQuery = QueryFactory.create(queryPrefixes.getString() + query);
                 QueryExecution instancesQueryExecution = QueryExecutionFactory.create(instancesQuery, fileModel);
                 com.hp.hpl.jena.query.ResultSet instancesResults = instancesQueryExecution.execSelect();
@@ -739,10 +798,11 @@ class DataRetrievalOperations {
                     Hashtable<String, Vector<String>> uriValuesToStartingUris = new Hashtable<String, Vector<String>>();
                     UserQueryConfiguration currentSequence = qSequences.get(thirdLevelLoopIndex);
                     int sequencePosition = currentSequence.getPositionID();
-                    boolean canFastMethodBeApplied = false;
-                    if (dataMode == DataMode.TARGET_DATA && canQuickFilteringMethodBeFollowedForeachSequence != null) {
-                        canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(thirdLevelLoopIndex);
-                    }
+//                    boolean canFastMethodBeApplied = false;
+//                    if (dataMode == DataMode.TARGET_DATA && canQuickFilteringMethodBeFollowedForeachSequence != null) {
+//                        canFastMethodBeApplied = canQuickFilteringMethodBeFollowedForeachSequence.get(thirdLevelLoopIndex);
+//                      
+//                    }
 
                     String[] parameterNames = currentSequence.getSortedParameterNamesCopy();
                     String[] parameterTypes = currentSequence.getSortedParameterTypesCopy();
@@ -779,13 +839,13 @@ class DataRetrievalOperations {
                             boolean performValueFiltering = false;
                             int sixthLevelLoopStartIndex = -1;
                             int sixthLevelLoopMaxIndex = -1;
-                            if (canFastMethodBeApplied) {
-                                //perform a loop over values                                                      
-                                performValueFiltering = true;
-                                stepValues.addAll(indexedDataFromInputFiles.get(sequencePosition).get(currentParamName));
-                                sixthLevelLoopStartIndex= 0;
-                                sixthLevelLoopMaxIndex = stepValues.size();  
-                            }
+//                            if (canFastMethodBeApplied) {
+//                                //perform a loop over values                                                      
+//                                performValueFiltering = true;
+//                                stepValues.addAll(indexedDataFromInputFiles.get(sequencePosition).get(currentParamName));
+//                                sixthLevelLoopStartIndex= 0;
+//                                sixthLevelLoopMaxIndex = stepValues.size();  
+//                            }
                             
                             while(valuesFilteringLoopExecuted==false || (sixthLevelLoopMaxIndex>0 && sixthLevelLoopStartIndex<sixthLevelLoopMaxIndex) ){
                         
@@ -823,7 +883,20 @@ class DataRetrievalOperations {
                                     seventhLevelLoopCounter = 0;
                                     
 
-                                Query predicateQuery = QueryFactory.create(queryPrefixes.getString() + seventhLevelQuery);
+                                Query predicateQuery = null;
+								try {
+									predicateQuery = QueryFactory.create(queryPrefixes.getString() + seventhLevelQuery);
+									
+								} catch (Exception e) {
+									e.printStackTrace();
+									seventhLevelQuery=seventhLevelQuery.replace("\"", "&quot;");
+									try {
+										predicateQuery = QueryFactory.create(queryPrefixes.getString() + seventhLevelQuery);
+									} catch (Exception e1) {
+									
+										System.out.println("DEBUG: PROBLEM with the query :"+seventhLevelQuery);
+									}
+								}
                                 QueryExecution instancesQueryExecution = QueryExecutionFactory.create(predicateQuery, fileModel);
                                 com.hp.hpl.jena.query.ResultSet predicateResults = instancesQueryExecution.execSelect();
 
@@ -877,7 +950,7 @@ class DataRetrievalOperations {
 
                                     handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
                                             currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
-                                            dataMode, loadFile, inputFilesInfo, pairSimilaritiesInSequences, canFastMethodBeApplied);
+                                            dataMode, loadFile, inputFilesInfo, pairSimilaritiesInSequences, false);
                                     /*
                                         handlePairOf_StartingUri_and_Value(forthLevelLoopStepIndex, startingUri, value, lang, 
                                                 currentSequence, currentFileInfo, currentParamName, currentParamType, uriValuesToStartingUris, 
@@ -1387,6 +1460,11 @@ class DataRetrievalOperations {
             SourceDataHolder inputFilesInfo,
             Hashtable<SourceTargetPair, SequenceSimilarityResultVector> pairSimilaritiesInSequences,
             boolean canFastMethodBeApplied) {
+    	
+    	//eva's change to skip fast method
+    	canFastMethodBeApplied=false;
+    	
+    	String mnemonic= currentSequence.getMnemonic();
 
         if (dataMode == DataMode.SOURCE_DATA || (dataMode == DataMode.TARGET_DATA && ApiConstants.checkForSimilaritiesAsWeGetResults == false) ) {
             
@@ -1489,8 +1567,10 @@ class DataRetrievalOperations {
                         }
 
                         DataRecord srcCompareRecord = new DataRecord("", "");
+                        Hashtable<String,String> nationalityTable=this.comp.imClass.nationalitiesFile.nationalityTrans;
+                        Hashtable<String,String> placesTable=this.comp.imClass.placesFile.placesTrans;
 
-                        Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord);
+                        Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord, mnemonic, nationalityTable, placesTable);
                         if (tempComparisonResult > 0d) {
 
                             SourceInstancePair pair = new SourceInstancePair(file, sourceuri);
@@ -1554,7 +1634,7 @@ class DataRetrievalOperations {
                                 SequencesVector pairdata = inputFilesInfo.get(file).get(srcuri);
 
                                 SequenceData seqData = pairdata.getSequenceDataAtPosition(currentSequence.getPositionID());
-
+                               
                                 if (seqData == null) {
                                     continue;
                                 }
@@ -1569,8 +1649,11 @@ class DataRetrievalOperations {
                                 }
 
                                 DataRecord srcCompareRecord = new DataRecord("", "");
+                                
+                                Hashtable<String,String> nationalityTable=this.comp.imClass.nationalitiesFile.nationalityTrans;
+                                Hashtable<String,String> placesTable=this.comp.imClass.placesFile.placesTrans;
 
-                                Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord);
+                                Double tempComparisonResult = this.comp.compareValueAgainstVector(currentParamType, checkRecord, sourceVals, srcCompareRecord, seqData.getSchemaInfo().getMnemonic(),  nationalityTable, placesTable);
                                 if (tempComparisonResult > 0d) {
                                     SourceInstancePair pair = new SourceInstancePair(file, srcuri);
 

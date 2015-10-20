@@ -44,6 +44,18 @@
             </QueryNamespaces>
             <IdPredicateUri>http://www.ontotext.com/owlim/entity#id</IdPredicateUri>
         </OnlineDatabase>
+         <OnlineDatabase sourceid="BM_BIOGRAPHY_COLLECTION" PredicateDirection="direct" dbType="virtuoso">
+            <Name>British Museum Semantic Web Collection Biography Online</Name>
+            <SparqlEndpoint>http://83.212.110.131:8890/sparql</SparqlEndpoint>            
+            <QueryNamespaces>
+                <Namespace prefix="ecrm">http://erlangen-crm.org/current/</Namespace>
+                <Namespace prefix="rdfs">http://www.w3.org/2000/01/rdf-schema#</Namespace>
+                <Namespace prefix="rdf">http://www.w3.org/1999/02/22-rdf-syntax-ns#</Namespace>     
+                <Namespace prefix="skos">http://www.w3.org/2004/02/skos/core#</Namespace>                
+                <Namespace prefix="bmo">http://collection.britishmuseum.org/id/ontology/</Namespace>
+                <!--<Namespace prefix="ent"></Namespace>-->
+            </QueryNamespaces>
+        </OnlineDatabase>
         <!--
         <OnlineDatabase sourceid="CULTURA_ITALIA">
             <Name>Cultura Italia</Name>
