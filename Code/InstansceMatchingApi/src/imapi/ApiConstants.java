@@ -52,7 +52,7 @@ public class ApiConstants {
     
     public enum TargetSourceChoice {
 
-        FILE_COMPARISON, BRITISH_MUSEUM_COLLECTION, /*CULTURA_ITALIA,*/ CLAROS
+        FILE_COMPARISON, BRITISH_MUSEUM_COLLECTION, /*CULTURA_ITALIA,*/ CLAROS, BM_BIOGRAPHY_COLLECTION
     };
 
    

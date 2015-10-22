@@ -56,6 +56,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -65,6 +68,8 @@ import org.apache.jena.atlas.io.IndentedWriter;
 public class IMAPIClass {
 
     static boolean DEBUG = false;    
+    static boolean nationalityTrans = false;    
+    static boolean placesTrans = false;    
     //static boolean ExtentedMessagesEnabled = false;
     
     public void disableExtentedMessages() {
@@ -118,11 +123,20 @@ public class IMAPIClass {
         }
     }
     
+    public void enableNationalityTranslation() {
+        IMAPIClass.nationalityTrans = true;
+    }
+    
+    public void enablePlacesTranslation() {
+        IMAPIClass.placesTrans = true;
+    }
 
     //tools
     ApiConfigClass conf = null;
     UserConfigurationClass userConfig = null;
     QueryPrototypeConfigurationClass qWeightsConfig = null;
+    NationalitiesFile nationalitiesFile = null;
+    PlacesFile placesFile=null;
     
     /**
      * Do not forget to check IMAPIClass's getErrorCode() after initialization
@@ -158,13 +172,30 @@ public class IMAPIClass {
         if (conf.getErrorCode() != ApiConstants.IMAPISuccessCode) {
             this.setErrorMessage(conf.getErrorCode(), conf.getErrorMessage());
             return;
-        }       
+        }   
+        
+        try {
+			nationalitiesFile= new NationalitiesFile();
+		} catch (ParserConfigurationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.out.print("Error in new NationalitiesFile();");
+		}
+        
+        try {
+    			placesFile= new PlacesFile();
+    		} catch (ParserConfigurationException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    			System.out.print("Error in new PlacesFile();");
+    		}
 
     }
-    
+    public static Vector<String> invalidTimespansDetected = new Vector<String>();
     
     public int performComparison(Hashtable<Float, Vector<ResultSourceTargetPair>> resultInstances) {
 
+        invalidTimespansDetected = new Vector<String>();
         //Utilities
         DataRetrievalOperations retrieveData = new DataRetrievalOperations(this);
         BaseComparisonClass compClass = new BaseComparisonClass(this);
@@ -226,7 +257,15 @@ public class IMAPIClass {
         System.out.println("============================================================");
         System.out.println("============================================================");
         System.out.println("Found " + totalNumberOfSourceInstanceValuesFound + " instances in all \"\"SOURCE\"\" input files.");
-        printSourceInfo(inputSourceInfo);
+        System.out.println("\n\n======================= SKIPING PRINTING OF SOURCE DATA =======================\n\n");
+        //printSourceInfo(inputSourceInfo);
+        
+        //remove from source structure all records that do not have a chance 
+        //of qualifying the threshold
+        //This case occurs if the sum of the weight of the sequences found
+        //for one instance is not greater than threshold
+        removeSourceDataThatWillNotQualifyThreshold(inputSourceInfo);
+        
         
         /*
         if(IMAPIClass.DEBUG){
@@ -368,8 +407,15 @@ public class IMAPIClass {
         
         if(targetDataCollectedCorrectly==false){
             System.out.println("Note that while collected data from target Error Occurred");
+            System.out.println("errorMessage: "+this.errorMessage);
         }
-        
+        if(invalidTimespansDetected.size()>0){
+            System.out.println("The following invalid timespans were detected:\n-----------------------------------------------\n\n");
+            Collections.sort(invalidTimespansDetected);
+            for(String str: invalidTimespansDetected){
+                System.out.println(str);
+            }
+        }
         
         return ApiConstants.IMAPISuccessCode;
     }
@@ -414,6 +460,47 @@ public class IMAPIClass {
             }
         }
 
+    }
+    
+    void removeSourceDataThatWillNotQualifyThreshold(SourceDataHolder sourceInfo){
+        
+        double similarityDenominator = 0;
+        
+        
+        
+        int maxNumberOfQueriesIndex = this.userConfig.getNumberOfSequences();
+        for (int i = 0; i < maxNumberOfQueriesIndex; i++) {            
+            similarityDenominator += this.userConfig.getWeightAtUserQueryIndex(i);
+        }
+        
+        Enumeration<String> fileEnum = sourceInfo.keys();
+        while(fileEnum.hasMoreElements()){
+            String fpath = fileEnum.nextElement();
+
+            
+            Enumeration<String> fileUris = sourceInfo.get(fpath).keys();
+            int howmanyCleared = 0;
+            while(fileUris.hasMoreElements()){
+                String uri = fileUris.nextElement();
+                SequencesVector seqVec = sourceInfo.get(fpath).get(uri);
+                
+                Double maximumSimilarityValue =0d;
+                
+                for(SequenceData seqData : seqVec){
+                    maximumSimilarityValue+=seqData.getSchemaInfo().getWeight(); 
+                }
+                
+                if((maximumSimilarityValue/similarityDenominator)<this.userConfig.getResultsThreshold()){
+                    //do not remove uri as we might also find such a similarity
+                    sourceInfo.get(fpath).get(uri).clear();
+                    howmanyCleared++;
+                }
+            }
+            
+            System.out.println("Removed "+howmanyCleared+" values from input file "+ fpath+" as they will never pass the threshold");
+            
+            
+        }
     }
     
     void printSourceInfo(SourceDataHolder sourceInfo){

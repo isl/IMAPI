@@ -96,7 +96,8 @@ class OnlineDatabaseActions {
         String baseURL = "";
         switch (targetChoice) {
             case BRITISH_MUSEUM_COLLECTION:
-            case CLAROS: {
+            case CLAROS:
+            case BM_BIOGRAPHY_COLLECTION: {
 
                 try {
 
@@ -281,6 +282,22 @@ class OnlineDatabaseActions {
                         List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
                         urlParameters.add(new BasicNameValuePair("query", query));
                         urlParameters.add(new BasicNameValuePair("format", "srj"));
+                        post.setEntity(new UrlEncodedFormEntity(urlParameters));
+                        break;                    
+                    }
+                    
+                    case BM_BIOGRAPHY_COLLECTION: {
+
+                        String USER_AGENT = "Mozilla/5.0";
+                        String baseURL = this.currentDB.getDbSparqlEndpoint();
+
+                        client = new DefaultHttpClient();
+                        post = new HttpPost(baseURL);
+
+                        post.setHeader("User-Agent", USER_AGENT);
+                        List<NameValuePair> urlParameters = new ArrayList<NameValuePair>();
+                        urlParameters.add(new BasicNameValuePair("query", query));
+                        //urlParameters.add(new BasicNameValuePair("format", "srj"));
                         post.setEntity(new UrlEncodedFormEntity(urlParameters));
                         break;                    
                     }

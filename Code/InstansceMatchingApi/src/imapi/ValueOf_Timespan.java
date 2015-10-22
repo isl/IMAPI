@@ -45,6 +45,7 @@ class ValueOf_Timespan {
     
     SimpleDateClass startDate = null;
     SimpleDateClass endDate = null;
+    int tmpInt;
     
     ValueOf_Timespan(String timeSpanStr){
         if(timeSpanStr==null || timeSpanStr.trim().length()==0){
@@ -58,14 +59,153 @@ class ValueOf_Timespan {
         
         for(int i=0; i<parts.length; i++){
             String tmp = parts[i];
+            
             if(tmp==null || tmp.trim().length()==0){
                 continue;
             }
             
             tmp=tmp.trim();
+            // if does not match something like 2010-12-12 or -1200 then continue
             if(tmp.matches("[-]?[0-9]+-[0-9]{1,2}-[0-9]{1,2}")==false){
-                continue;
+            	
+                //if (tmp.matches("[-]?\\d{4}$")==true){
+                if (tmp.matches("[-]?[0-9]{1,4}$")==true){
+                	
+                	if (tmp.startsWith("-")){
+                		tmp=tmp.substring(1);
+                	}
+                	
+                	//To give a slack -1 year for the start date
+                	if (startDate==null){
+
+                         try {
+							 tmpInt=Integer.parseInt(tmp);
+							tmpInt=tmpInt-1;
+							tmp=Integer.toString(tmpInt);
+						} catch (NumberFormatException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();}
+                         
+                         tmp=tmp+"-01-01";
+                	}
+                	//To give a slack +1 year to the end date
+    
+                	else {
+                         try {
+
+							int tmpInt=Integer.parseInt(tmp);
+							tmpInt=tmpInt+1;
+							tmp=Integer.toString(tmpInt);
+
+						} catch (NumberFormatException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();}
+                         
+                         
+                         tmp=tmp+"-12-31";
+                	}
+                	
+                	
+                
+                     
+                }
+                
+                
+                else if(tmp.matches("[-]?[0-9]+-[0-9]{1,2}$")==true){
+                	
+                	if (tmp.startsWith("-")){
+                		tmp=tmp.substring(1);
+                	}
+                	//To give a slack -1 year for the start date
+                	if (startDate==null){
+         
+                		String tmpYear=tmp.split("-")[0];
+                		String tmpMonth=tmp.split("-")[1];
+                		
+                		 try {
+							 tmpInt=Integer.parseInt(tmpYear);
+							tmpInt=tmpInt-1;
+							tmp=Integer.toString(tmpInt)+"-"+tmpMonth;
+						} catch (NumberFormatException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();}
+                		 
+                		 
+                			tmp=tmp+"-01";
+                	}
+                		
+                	//To give a slack +1 year for the end date
+                	else {
+                		
+                		String tmpYear=tmp.split("-")[0];
+                		String tmpMonth=tmp.split("-")[1];
+                		
+                		 try {
+							 tmpInt=Integer.parseInt(tmpYear);
+							tmpInt=tmpInt+1;
+							tmp=Integer.toString(tmpInt)+"-"+tmpMonth;
+						} catch (NumberFormatException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();}
+                		 
+                		 
+                        if(tmp.endsWith("01")||tmp.endsWith("03")||tmp.endsWith("05")||tmp.endsWith("07")||tmp.endsWith("08")||tmp.endsWith("10")||tmp.endsWith("12")){
+                            tmp=tmp+"-31";
+                        }
+                        else if(tmp.endsWith("04")||tmp.endsWith("06")||tmp.endsWith("09")||tmp.endsWith("11")){
+                            tmp=tmp+"-30";
+                        }
+                        else if(tmp.endsWith("02")){
+                            tmp=tmp+"-28";
+                        }
+                    }
+                }
+                
+                else {
+                    continue;
+                }
+       
             }
+            else {
+            	
+            	if (tmp.startsWith("-")){
+            		tmp=tmp.substring(1);
+            	}
+            	
+            	//To give a slack -1 year for the start date
+            	if (startDate==null){
+     
+            		String tmpYear=tmp.split("-")[0];
+            		String tmpMonth=tmp.split("-")[1];
+            		String tmpDay=tmp.split("-")[2];
+            		
+            		 try {
+						 tmpInt=Integer.parseInt(tmpYear);
+						tmpInt=tmpInt-1;
+						tmp=Integer.toString(tmpInt)+"-"+tmpMonth+"-"+tmpDay;
+					} catch (NumberFormatException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();}
+            	}
+            		
+            	//To give a slack +1 year for the end date
+            	else {
+            		
+            		String tmpYear=tmp.split("-")[0];
+            		String tmpMonth=tmp.split("-")[1];
+            		String tmpDay=tmp.split("-")[2];
+            		
+            		 try {
+						 tmpInt=Integer.parseInt(tmpYear);
+						tmpInt=tmpInt+1;
+						tmp=Integer.toString(tmpInt)+"-"+tmpMonth+"-"+tmpDay;
+					} catch (NumberFormatException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();}
+            	}
+            }
+            
+          
             SimpleDateClass tempDate = new SimpleDateClass(tmp);
             
             if(tempDate.isSet() == false){
@@ -73,6 +213,7 @@ class ValueOf_Timespan {
             }
             
             if(i==0){
+            
                 startDate = tempDate;
             }
             else{
@@ -80,20 +221,42 @@ class ValueOf_Timespan {
             }
         }
         
-        if(startDate==null & endDate!=null){
-            startDate = endDate.getCopy();//.getStartOfYear();            
-        }
-        
-        if(startDate!=null & endDate==null){
+        if(startDate==null && endDate==null){
             
-            endDate = startDate.getCopy();//.getEndOfYear();            
-        }
-        
-        if(startDate.isBeforeOrEqual(endDate)){
-            //System.out.println("OK");
+            if(IMAPIClass.DEBUG){
+                System.out.println("Invalid timespan - startDate: null endDate:null " + timeSpanStr);        
+            }
+            if(IMAPIClass.invalidTimespansDetected.contains("Invalid timespan - startDate: null endDate:null " + timeSpanStr)==false){
+                IMAPIClass.invalidTimespansDetected.add("Invalid timespan - startDate: null endDate:null " + timeSpanStr);
+            }
         }
         else{
-            System.out.println("Invalid timespan: startDate: " + startDate.toString() + "  endDate: " + endDate.toString());
+        
+	        if(startDate==null && endDate!=null){
+	            startDate = endDate.getCopy();//.getStartOfYear();            
+	        }
+	        
+	        if(startDate!=null && endDate==null){
+	            
+	            endDate = startDate.getCopy();//.getEndOfYear();  
+	            
+	           
+	            
+	        }
+	        
+	        if(startDate.isBeforeOrEqual(endDate)){
+	            //System.out.println("OK");
+	        }
+	      
+	        else{
+                    if(IMAPIClass.DEBUG){
+                        System.out.println("Invalid timespan: startDate: " + startDate.toString() + "  endDate: " + endDate.toString());
+                    }
+                    if(IMAPIClass.invalidTimespansDetected.contains("Invalid timespan: startDate: " + startDate.toString() + "  endDate: " + endDate.toString())==false){
+                        IMAPIClass.invalidTimespansDetected.add("Invalid timespan: startDate: " + startDate.toString() + "  endDate: " + endDate.toString());
+                    }
+	            
+	        }
         }
     }
             
