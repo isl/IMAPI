@@ -26,6 +26,7 @@
  Authors: 
  =============================================================================
  Elias Tzortzakakis <tzortzak@ics.forth.gr>
+ Evangelia Daskalaki <eva@ics.forth.gr>
 
 
 
@@ -40,18 +41,14 @@
 --------------------------------------------------------------------
 
 
-IMAPI v2.0 new features (last development date 04 Nov. 2014):
+IMAPI RijksBranch new features (last development date 04 Nov. 2015):
 ====================================================================
 
-- Changed the workflow of queries so that more depth in queries is 
-  supported. This change had a positive impact to stability, scalability 
-  and memory occupied but had a negative impact in time required to 
-  calculate the results.
+- Added more queries for forename, lastname, nationality and place names.
 
-- Included british museum extentions to crm in the list of available 
-  predicates (e.g. PX_gender, PX_nationality etc.)
+- Created methods to handle the distinction between forename and lastname.
 
-- Created a structure that in order to keep the results returned by 
-  the comparison, so that they can be used by any application that uses
-  the api or displayed in any other user defined way. Previous version 
-  just printed out the results in a standard non-customizable format.
+- Extended the timespan searching algorithm to take into consideration all the types
+of matching timespans and added a margin of 1 year at the begin of the begin and the end of end properties.
+
+- Created 2 more xml files which contain the translation of nationalities (from Dutch to English) and the translation of place names (from Dutch to English).
